@@ -1,0 +1,92 @@
+{% extends 'atendimento/base.html' %}
+
+{% block title %}Novo Atendimento{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-3xl font-bold text-gray-800">Novo Atendimento</h2>
+        <p class="text-gray-600 mt-2">Registre um novo paciente e seu atendimento no pronto-socorro</p>
+    </div>
+
+    <form method="post" class="bg-white rounded-lg shadow p-6 space-y-8">
+        {% csrf_token %}
+
+        <!-- Dados do Paciente -->
+        <div class="border-b border-gray-200 pb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Dados do Paciente</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ paciente_form.nome.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Nome Completo *
+                    </label>
+                    {{ paciente_form.nome }}
+                    {% if paciente_form.nome.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ paciente_form.nome.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ paciente_form.cpf.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            CPF (somente números) *
+                        </label>
+                        {{ paciente_form.cpf }}
+                        {% if paciente_form.cpf.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ paciente_form.cpf.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ paciente_form.data_nascimento.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Data de Nascimento *
+                        </label>
+                        {{ paciente_form.data_nascimento }}
+                        {% if paciente_form.data_nascimento.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ paciente_form.data_nascimento.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dados do Atendimento -->
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Dados do Atendimento</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ atendimento_form.queixa.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Queixa Principal *
+                    </label>
+                    {{ atendimento_form.queixa }}
+                    {% if atendimento_form.queixa.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ atendimento_form.queixa.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ atendimento_form.status.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Status Inicial *
+                    </label>
+                    {{ atendimento_form.status }}
+                    {% if atendimento_form.status.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ atendimento_form.status.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões -->
+        <div class="flex items-center justify-end space-x-4 pt-4">
+            <a href="{% url 'dashboard' %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Cancelar
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Registrar Atendimento
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
