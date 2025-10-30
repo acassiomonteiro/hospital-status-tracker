@@ -1,74 +1,112 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect
 from django.contrib import messages
+from django.views.generic import ListView, FormView, DetailView
+from django.urls import reverse_lazy
 from .models import Paciente, Atendimento
 from .forms import PacienteForm, AtendimentoForm
 
 
-def dashboard(request):
+class DashboardView(ListView):
     """View principal - lista todos os atendimentos"""
-    atendimentos = Atendimento.objects.select_related('paciente').all()
-    context = {
-        'atendimentos': atendimentos,
-        'total_atendimentos': atendimentos.count(),
-    }
-    return render(request, 'atendimento/dashboard.html', context)
+    model = Atendimento
+    template_name = 'atendimento/dashboard.html'
+    context_object_name = 'atendimentos'
+
+    def get_queryset(self):
+        """Retorna queryset otimizado com select_related"""
+        return Atendimento.objects.select_related('paciente').all()
+
+    def get_context_data(self, **kwargs):
+        """Adiciona total de atendimentos ao contexto"""
+        context = super().get_context_data(**kwargs)
+        context['total_atendimentos'] = self.get_queryset().count()
+        return context
 
 
-def novo_atendimento(request):
-    """View para criar novo paciente + atendimento"""
-    if request.method == 'POST':
+class NovoAtendimentoView(FormView):
+    """View para criar novo paciente + atendimento (multi-form)"""
+    template_name = 'atendimento/novo_atendimento.html'
+    success_url = reverse_lazy('dashboard')
+    form_class = None  # Não usamos form_class padrão pois temos múltiplos forms
+
+    def get(self, request, *args, **kwargs):
+        """Handler GET - renderiza formulários vazios"""
+        context = {
+            'paciente_form': PacienteForm(),
+            'atendimento_form': AtendimentoForm(),
+        }
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):
+        """Processa os dois forms simultaneamente"""
         paciente_form = PacienteForm(request.POST)
         atendimento_form = AtendimentoForm(request.POST)
 
         if paciente_form.is_valid() and atendimento_form.is_valid():
-            # Verifica se paciente já existe pelo CPF
-            cpf = paciente_form.cleaned_data['cpf']
-            paciente, created = Paciente.objects.get_or_create(
-                cpf=cpf,
-                defaults={
-                    'nome': paciente_form.cleaned_data['nome'],
-                    'data_nascimento': paciente_form.cleaned_data['data_nascimento']
-                }
-            )
-
-            # Cria o atendimento
-            atendimento = atendimento_form.save(commit=False)
-            atendimento.paciente = paciente
-            atendimento.save()
-
-            if created:
-                messages.success(request, f'Paciente {paciente.nome} cadastrado e atendimento registrado com sucesso!')
-            else:
-                messages.success(request, f'Novo atendimento registrado para {paciente.nome}!')
-
-            return redirect('dashboard')
+            return self.forms_valid(paciente_form, atendimento_form)
         else:
             messages.error(request, 'Erro ao salvar. Verifique os dados informados.')
-    else:
-        paciente_form = PacienteForm()
-        atendimento_form = AtendimentoForm()
+            return self.render_to_response({
+                'paciente_form': paciente_form,
+                'atendimento_form': atendimento_form,
+            })
 
-    context = {
-        'paciente_form': paciente_form,
-        'atendimento_form': atendimento_form,
-    }
-    return render(request, 'atendimento/novo_atendimento.html', context)
+    def forms_valid(self, paciente_form, atendimento_form):
+        """Processa os forms válidos e cria paciente + atendimento"""
+        # Verifica se paciente já existe pelo CPF (get_or_create)
+        cpf = paciente_form.cleaned_data['cpf']
+        paciente, created = Paciente.objects.get_or_create(
+            cpf=cpf,
+            defaults={
+                'nome': paciente_form.cleaned_data['nome'],
+                'data_nascimento': paciente_form.cleaned_data['data_nascimento']
+            }
+        )
+
+        # Cria o atendimento vinculado ao paciente
+        atendimento = atendimento_form.save(commit=False)
+        atendimento.paciente = paciente
+        atendimento.save()
+
+        # Mensagem de sucesso condicional
+        if created:
+            messages.success(
+                self.request,
+                f'Paciente {paciente.nome} cadastrado e atendimento registrado com sucesso!'
+            )
+        else:
+            messages.success(
+                self.request,
+                f'Novo atendimento registrado para {paciente.nome}!'
+            )
+
+        return redirect(self.success_url)
 
 
-def atualizar_status(request, atendimento_id):
+class AtualizarStatusView(DetailView):
     """View para atualizar status de um atendimento"""
-    atendimento = get_object_or_404(Atendimento, pk=atendimento_id)
+    model = Atendimento
+    template_name = 'atendimento/atualizar_status.html'
+    pk_url_kwarg = 'atendimento_id'
+    context_object_name = 'atendimento'
 
-    if request.method == 'POST':
+    def get_context_data(self, **kwargs):
+        """Adiciona choices de status ao contexto"""
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = Atendimento.STATUS_CHOICES
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """Processa atualização de status via POST direto"""
+        atendimento = self.get_object()
         novo_status = request.POST.get('status')
+
         if novo_status:
             atendimento.status = novo_status
             atendimento.save()
-            messages.success(request, f'Status atualizado para: {atendimento.get_status_display()}')
-        return redirect('dashboard')
+            messages.success(
+                request,
+                f'Status atualizado para: {atendimento.get_status_display()}'
+            )
 
-    context = {
-        'atendimento': atendimento,
-        'status_choices': Atendimento.STATUS_CHOICES,
-    }
-    return render(request, 'atendimento/atualizar_status.html', context)
+        return redirect('dashboard')
