@@ -14,6 +14,14 @@ Sistema de Rastreamento de Status de Pacientes no Pronto-Socorro
 
 ## 🚀 Como Rodar
 ```bash
+# Criar e a Venv
+python -m venv venv
+# Ativar a Venv
+venv\Scripts\activate
+
+# Se tiver no PowerShell, lembrar da policy
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
 # Instalar dependências
 pip install Django==5.0.1
 
