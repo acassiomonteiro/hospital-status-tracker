@@ -15,10 +15,23 @@
                     <h1 class="text-2xl font-bold">Hospital Santa Helena Norte</h1>
                     <p class="text-blue-100 text-sm">Sistema de Rastreamento - Pronto-Socorro</p>
                 </div>
-                <nav class="space-x-4">
-                    <a href="{% url 'dashboard' %}" class="hover:text-blue-200 transition">Dashboard</a>
-                    <a href="{% url 'novo_atendimento' %}" class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition">+ Novo Atendimento</a>
-                </nav>
+                {% if user.is_authenticated %}
+                <div class="flex items-center space-x-4">
+                    <nav class="space-x-4">
+                        <a href="{% url 'dashboard' %}" class="hover:text-blue-200 transition">Dashboard</a>
+                        <a href="{% url 'novo_atendimento' %}" class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition">+ Novo Atendimento</a>
+                    </nav>
+                    <div class="border-l border-blue-400 pl-4 flex items-center space-x-3">
+                        <div class="text-right">
+                            <p class="text-sm font-medium">{{ user.get_full_name|default:user.username }}</p>
+                            {% if user.profissional %}
+                            <p class="text-xs text-blue-200">{{ user.profissional.get_perfil_display }}</p>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'logout' %}" class="bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded-lg transition text-sm">Sair</a>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </header>
