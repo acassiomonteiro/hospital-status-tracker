@@ -1,12 +1,14 @@
 from django.shortcuts import redirect
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import ListView, FormView, DetailView
 from django.urls import reverse_lazy
-from .models import Paciente, Atendimento
+from .models import Paciente, Atendimento, Profissional
 from .forms import PacienteForm, AtendimentoForm
 
 
-class DashboardView(ListView):
+class DashboardView(LoginRequiredMixin, ListView):
     """View principal - lista todos os atendimentos"""
     model = Atendimento
     template_name = 'atendimento/dashboard.html'
@@ -14,7 +16,7 @@ class DashboardView(ListView):
 
     def get_queryset(self):
         """Retorna queryset otimizado com select_related"""
-        return Atendimento.objects.select_related('paciente').all()
+        return Atendimento.objects.select_related('paciente', 'profissional_responsavel__user').all()
 
     def get_context_data(self, **kwargs):
         """Adiciona total de atendimentos ao contexto"""
@@ -23,7 +25,7 @@ class DashboardView(ListView):
         return context
 
 
-class NovoAtendimentoView(FormView):
+class NovoAtendimentoView(LoginRequiredMixin, FormView):
     """View para criar novo paciente + atendimento (multi-form)"""
     template_name = 'atendimento/novo_atendimento.html'
     success_url = reverse_lazy('dashboard')
@@ -63,9 +65,19 @@ class NovoAtendimentoView(FormView):
             }
         )
 
-        # Cria o atendimento vinculado ao paciente
+        # Cria o atendimento vinculado ao paciente e profissional
         atendimento = atendimento_form.save(commit=False)
         atendimento.paciente = paciente
+
+        # Vincula o profissional responsável (usuário logado)
+        try:
+            atendimento.profissional_responsavel = self.request.user.profissional
+        except Profissional.DoesNotExist:
+            messages.warning(
+                self.request,
+                'Atenção: Seu usuário não possui perfil de profissional vinculado.'
+            )
+
         atendimento.save()
 
         # Mensagem de sucesso condicional
@@ -83,7 +95,7 @@ class NovoAtendimentoView(FormView):
         return redirect(self.success_url)
 
 
-class AtualizarStatusView(DetailView):
+class AtualizarStatusView(LoginRequiredMixin, DetailView):
     """View para atualizar status de um atendimento"""
     model = Atendimento
     template_name = 'atendimento/atualizar_status.html'
@@ -110,3 +122,22 @@ class AtualizarStatusView(DetailView):
             )
 
         return redirect('dashboard')
+
+
+class CustomLoginView(LoginView):
+    """View customizada para login"""
+    template_name = 'registration/login.html'
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        messages.success(self.request, f'Bem-vindo(a), {self.request.user.get_full_name() or self.request.user.username}!')
+        return reverse_lazy('dashboard')
+
+
+class CustomLogoutView(LogoutView):
+    """View customizada para logout"""
+    next_page = 'login'
+
+    def dispatch(self, request, *args, **kwargs):
+        messages.info(request, 'Você saiu do sistema com sucesso.')
+        return super().dispatch(request, *args, **kwargs)
