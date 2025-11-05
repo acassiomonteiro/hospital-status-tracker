@@ -1,0 +1,17 @@
+# Garante line endings consistentes em diferentes sistemas operacionais
+
+# Scripts shell sempre devem usar LF (Unix)
+*.sh text eol=lf
+
+# Scripts Python devem usar LF
+*.py text eol=lf
+
+# Arquivos de configuração
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+
+# Arquivos Windows podem usar CRLF se necessário
+*.bat text eol=crlf
+*.ps1 text eol=crlf
