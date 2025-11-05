@@ -1,11 +1,12 @@
 services:
   web:
     build: .
+    container_name: ${COMPOSE_PROJECT_NAME:-hospital}_web
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "${WEB_PORT:-8000}:8000"
     depends_on:
       - db
     env_file:
@@ -18,11 +19,17 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
 
   db:
     image: postgres:14
+    container_name: ${COMPOSE_PROJECT_NAME:-hospital}_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "${DB_EXTERNAL_PORT:-5432}:5432"
     env_file:
       - .env
     environment:
