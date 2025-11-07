@@ -78,11 +78,10 @@ While Docker is preferred, a local setup is also possible.
 
 ## Project Status & Roadmap
 
-The project is being developed in phases.
-
 - **✅ Phase 1: Authentication (Complete)**: User login/logout and professional profiles are implemented.
 - **✅ Phase 2: Patient Data (Complete)**: The `Paciente` model has been expanded into a full electronic record.
-- **🎯 NEXT UP - Phase 3: Clinical Evolution (Critical)**: This is the highest priority. It involves creating the `Evolucao` model and views to allow medical staff to record clinical notes, forming the core of the electronic health record.
+- **✅ Phase 3: Clinical Evolution (Complete)**: Staff can now record clinical notes, creating a timeline for each attendance.
+- **🎯 NEXT UP - Phase 4: Vital Signs (Critical)**: The next priority is to implement the recording of vital signs for patients.
 
 ---
 

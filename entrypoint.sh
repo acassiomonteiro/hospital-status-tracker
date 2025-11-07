@@ -21,11 +21,6 @@ python manage.py migrate --noinput
 echo "Coletando arquivos estáticos..."
 python manage.py collectstatic --noinput
 
-# Debug: mostra quais variáveis estão disponíveis (remover em produção)
-echo "DEBUG: Verificando variáveis de ambiente..."
-echo "DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-[não definida]}"
-echo "DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-[não definida]}"
-echo "DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:+[definida]}${DJANGO_SUPERUSER_PASSWORD:-[não definida]}"
 
 # Verifica se as variáveis de superusuário estão definidas antes de tentar criar o superusuário
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
