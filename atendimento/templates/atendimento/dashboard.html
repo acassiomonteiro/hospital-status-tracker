@@ -54,7 +54,10 @@
                     </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <a href="{% url 'atualizar_status' atendimento.id %}" class="text-blue-600 hover:text-blue-900">Atualizar Status</a>
+                    <div class="flex flex-col space-y-1">
+                        <a href="{% url 'evolucoes_atendimento' atendimento.id %}" class="text-green-600 hover:text-green-900">Ver Evoluções</a>
+                        <a href="{% url 'atualizar_status' atendimento.id %}" class="text-blue-600 hover:text-blue-900">Atualizar Status</a>
+                    </div>
                 </td>
             </tr>
             {% endfor %}

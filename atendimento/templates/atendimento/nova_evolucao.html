@@ -1,0 +1,79 @@
+{% extends 'atendimento/base.html' %}
+
+{% block title %}Nova Evolução - {{ atendimento.paciente.nome }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Nova Evolução Clínica</h2>
+            <p class="text-gray-600 mt-2">
+                Paciente: <span class="font-semibold">{{ atendimento.paciente.nome }}</span> (CPF: {{ atendimento.paciente.cpf }})
+            </p>
+            <p class="text-gray-600 text-sm">
+                Atendimento iniciado em {{ atendimento.data_hora_entrada|date:"d/m/Y às H:i" }}
+            </p>
+        </div>
+        <a href="{% url 'evolucoes_atendimento' atendimento.id %}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Ver Timeline
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-md p-6">
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <div>
+            <label for="{{ form.tipo.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.tipo.label }}
+            </label>
+            {{ form.tipo }}
+            {% if form.tipo.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.tipo.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <label for="{{ form.descricao.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.descricao.label }}
+            </label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.descricao.errors.0 }}</p>
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">
+                Profissional: {{ request.user.get_full_name|default:request.user.username }} - {{ request.user.profissional.get_perfil_display }}
+            </p>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3">
+            <a href="{% url 'evolucoes_atendimento' atendimento.id %}"
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                Cancelar
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Registrar Evolução
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-blue-700">
+                <strong>Dica:</strong> Evoluções clínicas são registros permanentes e não podem ser editadas após salvamento.
+                Certifique-se de revisar o conteúdo antes de registrar.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
