@@ -463,3 +463,93 @@ class CancelarExameView(LoginRequiredMixin, View):
         messages.success(request, f'Solicitação de exame cancelada: {solicitacao.nome_exame}')
 
         return redirect('solicitacoes_exame_atendimento', atendimento_id=solicitacao.atendimento.id)
+
+
+class ProntuarioCompletoView(LoginRequiredMixin, DetailView):
+    """View para exibir prontuário completo com timeline cronológica unificada"""
+    model = Atendimento
+    template_name = 'prontuario/prontuario_completo.html'
+    pk_url_kwarg = 'atendimento_id'
+    context_object_name = 'atendimento'
+
+    def get_queryset(self):
+        """Otimiza query com prefetch de todos os registros clínicos"""
+        return Atendimento.objects.select_related(
+            'paciente',
+            'profissional_responsavel__user'
+        ).prefetch_related(
+            'evolucoes__profissional__user',
+            'sinais_vitais__profissional__user',
+            'prescricoes__profissional__user',
+            'prescricoes__itens',
+            'solicitacoes_exame__profissional__user',
+            'solicitacoes_exame__resultado'
+        )
+
+    def get_context_data(self, **kwargs):
+        """Consolida todos os eventos em timeline cronológica unificada"""
+        context = super().get_context_data(**kwargs)
+
+        # Lista unificada de eventos
+        eventos = []
+
+        # Adiciona evoluções
+        for evolucao in self.object.evolucoes.all():
+            eventos.append({
+                'tipo': 'evolucao',
+                'data': evolucao.data_hora,
+                'objeto': evolucao,
+                'icone': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'cor_borda': 'blue',
+            })
+
+        # Adiciona sinais vitais
+        for sinal in self.object.sinais_vitais.all():
+            eventos.append({
+                'tipo': 'sinal_vital',
+                'data': sinal.data_hora,
+                'objeto': sinal,
+                'icone': 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
+                'cor_borda': 'purple',
+            })
+
+        # Adiciona prescrições
+        for prescricao in self.object.prescricoes.all():
+            eventos.append({
+                'tipo': 'prescricao',
+                'data': prescricao.data_prescricao,
+                'objeto': prescricao,
+                'icone': 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+                'cor_borda': 'indigo',
+            })
+
+        # Adiciona solicitações de exames
+        for solicitacao in self.object.solicitacoes_exame.all():
+            # Usa data do resultado se disponível, senão usa data de solicitação
+            if solicitacao.tem_resultado():
+                data_evento = solicitacao.resultado.data_resultado
+            else:
+                data_evento = solicitacao.data_solicitacao
+
+            eventos.append({
+                'tipo': 'exame',
+                'data': data_evento,
+                'objeto': solicitacao,
+                'icone': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'cor_borda': 'orange',
+            })
+
+        # Ordena eventos por data (mais recente primeiro)
+        eventos.sort(key=lambda x: x['data'], reverse=True)
+
+        # Adiciona ao contexto
+        context['eventos'] = eventos
+        context['total_eventos'] = len(eventos)
+
+        # Estatísticas
+        context['total_evolucoes'] = self.object.evolucoes.count()
+        context['total_sinais_vitais'] = self.object.sinais_vitais.count()
+        context['total_prescricoes'] = self.object.prescricoes.count()
+        context['total_exames'] = self.object.solicitacoes_exame.count()
+
+        return context
