@@ -9,4 +9,8 @@ urlpatterns = [
     # Sinais Vitais
     path('atendimento/<int:atendimento_id>/sinais-vitais/', views.SinaisVitaisAtendimentoView.as_view(), name='sinais_vitais_atendimento'),
     path('atendimento/<int:atendimento_id>/sinais-vitais/novo/', views.NovoSinalVitalView.as_view(), name='novo_sinal_vital'),
+
+    # Prescrições Médicas
+    path('atendimento/<int:atendimento_id>/prescricoes/', views.PrescricoesAtendimentoView.as_view(), name='prescricoes_atendimento'),
+    path('atendimento/<int:atendimento_id>/prescricao/nova/', views.NovaPrescricaoView.as_view(), name='nova_prescricao'),
 ]
