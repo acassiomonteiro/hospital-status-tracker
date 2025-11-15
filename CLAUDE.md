@@ -58,12 +58,12 @@ hospital-status-tracker/
 │           ├── dashboard.html  # Lista de atendimentos
 │           ├── novo_atendimento.html
 │           └── atualizar_status.html
-├── prontuario/                  # App de Prontuário (Evoluções, Sinais Vitais e Prescrições)
-│   ├── models.py               # Models: Evolucao, SinalVital, Prescricao, ItemPrescricao
-│   ├── views.py                # NovaEvolucaoView, EvolucoesAtendimentoView, NovoSinalVitalView, SinaisVitaisAtendimentoView, NovaPrescricaoView, PrescricoesAtendimentoView
-│   ├── urls.py                 # Rotas: evolucoes, sinais-vitais, prescricoes
-│   ├── forms.py                # EvolucaoForm, SinalVitalForm, PrescricaoForm, ItemPrescricaoFormSet
-│   ├── admin.py                # EvolucaoAdmin, SinalVitalAdmin, PrescricaoAdmin
+├── prontuario/                  # App de Prontuário (Evoluções, Sinais Vitais, Prescrições e Exames)
+│   ├── models.py               # Models: Evolucao, SinalVital, Prescricao, ItemPrescricao, SolicitacaoExame, ResultadoExame
+│   ├── views.py                # Views para evoluções, sinais vitais, prescrições e exames
+│   ├── urls.py                 # Rotas: evolucoes, sinais-vitais, prescricoes, exames
+│   ├── forms.py                # Forms: EvolucaoForm, SinalVitalForm, PrescricaoForm, ItemPrescricaoFormSet, SolicitacaoExameForm, ResultadoExameForm
+│   ├── admin.py                # Admin: EvolucaoAdmin, SinalVitalAdmin, PrescricaoAdmin, SolicitacaoExameAdmin, ResultadoExameAdmin
 │   ├── apps.py
 │   ├── migrations/
 │   └── templates/
@@ -75,7 +75,11 @@ hospital-status-tracker/
 │           ├── novo_sinal_vital.html
 │           ├── sinais_vitais_atendimento.html
 │           ├── nova_prescricao.html
-│           └── prescricoes_atendimento.html
+│           ├── prescricoes_atendimento.html
+│           ├── nova_solicitacao_exame.html
+│           ├── solicitacoes_exame_atendimento.html
+│           └── adicionar_resultado_exame.html
+├── media/                      # Uploads de arquivos (laudos de exames)
 └── staticfiles/                # Arquivos estáticos coletados
 ```
 
@@ -108,12 +112,16 @@ pacientes (Paciente)    →    atendimentos (Atendimento)    →    prontuario (
 - `Prescricao` → `Atendimento` (ForeignKey)
 - `Prescricao` → `Profissional` (ForeignKey)
 - `ItemPrescricao` → `Prescricao` (ForeignKey, CASCADE)
+- `SolicitacaoExame` → `Atendimento` (ForeignKey)
+- `SolicitacaoExame` → `Profissional` (ForeignKey)
+- `ResultadoExame` → `SolicitacaoExame` (OneToOneField)
 
 **Fluxo de Dados:**
 1. **Cadastro**: Profissional → Paciente → Atendimento
-2. **Acompanhamento**: Atendimento → Múltiplas Evoluções + Múltiplos Sinais Vitais + Múltiplas Prescrições
+2. **Acompanhamento**: Atendimento → Múltiplas Evoluções + Múltiplos Sinais Vitais + Múltiplas Prescrições + Múltiplas Solicitações de Exames
 3. **Auditoria**: Todas as ações rastreáveis pelo Profissional
-4. **Segregação**: Prescrições somente por perfil MEDICO
+4. **Segregação**: Prescrições e Solicitações de Exames somente por perfil MEDICO
+5. **Upload**: ResultadoExame permite upload de laudos (PDF, imagens)
 
 **Configuração em settings.py:**
 ```python
@@ -291,6 +299,63 @@ INSTALLED_APPS = [
 - Duração entre 1 e 365 dias
 - Validade não pode ser anterior à data atual
 
+### SolicitacaoExame ✅ Implementado
+- `atendimento`: ForeignKey → Atendimento (PROTECT)
+- `profissional`: ForeignKey → Profissional (PROTECT)
+- `tipo`: CharField (choices: LABORATORIO, IMAGEM, CARDIOLOGIA, ANATOMIA_PATOLOGICA, OUTRO)
+- `nome_exame`: CharField (200 chars)
+- `justificativa`: TextField
+- `status`: CharField (choices: SOLICITADO, COLETADO, RESULTADO_DISPONIVEL, CANCELADO, default: SOLICITADO)
+- `data_solicitacao`: DateTimeField (auto_now_add)
+- `data_atualizacao`: DateTimeField (auto_now)
+
+**Tipos de Exame disponíveis:**
+1. LABORATORIO
+2. IMAGEM
+3. CARDIOLOGIA
+4. ANATOMIA_PATOLOGICA
+5. OUTRO
+
+**Status disponíveis:**
+1. SOLICITADO
+2. COLETADO
+3. RESULTADO_DISPONIVEL
+4. CANCELADO
+
+**Métodos:**
+- `get_status_badge_class()`: Retorna classe Tailwind por status
+- `get_tipo_badge_class()`: Retorna classe Tailwind por tipo
+- `tem_resultado()`: Verifica se a solicitação possui resultado registrado
+
+**Restrições:**
+- **Apenas perfil MEDICO pode solicitar exames**
+- **Apenas perfil MEDICO pode cancelar solicitações**
+- Não é possível cancelar solicitação que já possui resultado
+- Status atualizado automaticamente para RESULTADO_DISPONIVEL ao adicionar resultado
+
+### ResultadoExame ✅ Implementado
+- `solicitacao`: OneToOneField → SolicitacaoExame (PROTECT)
+- `resultado_texto`: TextField
+- `arquivo_laudo`: FileField (upload_to='laudos/%Y/%m/', opcional)
+- `data_resultado`: DateTimeField (auto_now_add)
+- `observacoes`: TextField (opcional)
+
+**Upload de Arquivos:**
+- Tipos aceitos: PDF, JPG, JPEG, PNG
+- Tamanho máximo: 10MB
+- Path de upload: `media/laudos/YYYY/MM/`
+- Validação em dupla camada (form + model)
+
+**Configuração de Media:**
+```python
+# settings.py
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# urls.py (desenvolvimento)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+
 ---
 
 ## Padrões de Código
@@ -392,6 +457,10 @@ paciente, created = Paciente.objects.get_or_create(
 - `/atendimento/<id>/sinais-vitais/novo/` - Registrar novos sinais vitais
 - `/atendimento/<id>/prescricoes/` - Timeline de prescrições médicas
 - `/atendimento/<id>/prescricao/nova/` - Criar nova prescrição (MÉDICOS APENAS)
+- `/atendimento/<id>/exames/` - Timeline de solicitações de exames
+- `/atendimento/<id>/exame/solicitar/` - Solicitar novo exame (MÉDICOS APENAS)
+- `/exame/<id>/resultado/` - Adicionar resultado a uma solicitação
+- `/exame/<id>/cancelar/` - Cancelar solicitação de exame (MÉDICOS APENAS)
 
 **Admin:**
 - `/admin/` - Interface administrativa Django
@@ -561,18 +630,29 @@ docker-compose exec db psql -U hospital_admin -d hospital_db
 
 ---
 
-### 🟡 FASE 6: EXAMES (PRÓXIMA - DESEJÁVEL)
+### ✅ FASE 6: EXAMES (COMPLETA)
 
-- [ ] Model SolicitacaoExame (tipo, nome, justificativa, status)
-- [ ] Model ResultadoExame (resultado, arquivo_laudo, data)
-- [ ] Upload de laudos (FileField)
-- [ ] Rastreamento de solicitações
-- [ ] Status: SOLICITADO, COLETADO, CONCLUIDO
+**Por que é crítica:** Centraliza solicitações e resultados de exames que hoje ficam fragmentados em portais de terceiros, criando nexo causal claro entre solicitação, atendimento e resultado.
+
+- [x] Model SolicitacaoExame (tipo, nome_exame, justificativa, status)
+- [x] Model ResultadoExame (resultado_texto, arquivo_laudo, observacoes)
+- [x] Upload de laudos em PDF ou imagens (max 10MB)
+- [x] Configuração de MEDIA_ROOT e MEDIA_URL para uploads
+- [x] Rastreamento completo de solicitações por atendimento
+- [x] 5 tipos de exame: Laboratório, Imagem, Cardiologia, Anatomia Patológica, Outro
+- [x] 4 status: Solicitado, Coletado, Resultado Disponível, Cancelado
+- [x] Restrição de acesso: apenas perfil MEDICO pode solicitar e cancelar
+- [x] Qualquer profissional pode adicionar resultado
+- [x] Timeline visual de solicitações com badges coloridos por status
+- [x] Visualização de laudos anexados
+- [x] Validações: tipo de arquivo (PDF/imagens), tamanho (10MB max)
+- [x] Atualização automática de status ao adicionar resultado
+- [x] Integração com dashboard (botão + badge de contagem)
 
 **Problema da PBL que resolve:**
 > "Resultados disponibilizados em portais de terceiros, notificações por email genérico"
 
-✅ Centraliza solicitações, mesmo que resultados venham de fora há vínculo claro.
+✅ Centraliza solicitações e resultados, mesmo que laudos venham de fora há vínculo claro com atendimento, profissional solicitante e histórico completo.
 
 ---
 
@@ -628,11 +708,22 @@ docker-compose exec db psql -U hospital_admin -d hospital_db
 - 10 vias de administração disponíveis
 - Integração com dashboard (botão visível apenas para médicos)
 
+**FASE 6 - Exames:** ✅ COMPLETA
+- Solicitação de exames laboratoriais e de imagem
+- **Restrição de acesso: apenas perfil MEDICO pode solicitar**
+- Upload de laudos (PDF, imagens até 10MB)
+- Timeline de solicitações com status
+- 5 tipos de exame (Laboratório, Imagem, Cardiologia, etc.)
+- 4 status (Solicitado, Coletado, Resultado Disponível, Cancelado)
+- Qualquer profissional pode adicionar resultado
+- Integração com dashboard (botão + badge laranja)
+- Configuração de MEDIA para uploads
+
 ### 🎯 Próximo Passo
 
-**FASE 6 - Exames** (Desejável)
+**FASE 7 - Prontuário Completo** (Fechamento e Consolidação)
 
-O próximo passo é implementar o sistema de solicitação e acompanhamento de exames laboratoriais e de imagem, centralizando solicitações e resultados que hoje ficam fragmentados em portais de terceiros.
+O próximo passo é criar uma view consolidada que unifique todas as informações do atendimento (evoluções, sinais vitais, prescrições e exames) em uma timeline única e completa, fechando o ciclo do prontuário eletrônico integrado.
 
 ---
 
