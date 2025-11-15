@@ -21,7 +21,10 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('atendimento.urls')),
+    path('', include('usuarios.urls')),
+    path('', include('atendimentos.urls')),
+    path('', include('prontuario.urls')),
+    path('', include('ia.urls'))
 ]
 
 # Configuração para servir arquivos estáticos em desenvolvimento
