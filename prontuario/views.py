@@ -6,8 +6,8 @@ from django.urls import reverse
 from django.db import transaction
 from atendimentos.models import Atendimento
 from usuarios.models import Profissional
-from .models import Evolucao, SinalVital, Prescricao
-from .forms import EvolucaoForm, SinalVitalForm, PrescricaoForm, ItemPrescricaoFormSet
+from .models import Evolucao, SinalVital, Prescricao, SolicitacaoExame, ResultadoExame
+from .forms import EvolucaoForm, SinalVitalForm, PrescricaoForm, ItemPrescricaoFormSet, SolicitacaoExameForm, ResultadoExameForm
 
 
 class NovaEvolucaoView(LoginRequiredMixin, FormView):
@@ -277,3 +277,189 @@ class PrescricoesAtendimentoView(LoginRequiredMixin, DetailView):
             context['e_medico'] = False
 
         return context
+
+
+class NovaSolicitacaoExameView(LoginRequiredMixin, FormView):
+    """View para criar nova solicitação de exame (apenas perfil MEDICO)"""
+    template_name = 'prontuario/nova_solicitacao_exame.html'
+    form_class = SolicitacaoExameForm
+
+    def dispatch(self, request, *args, **kwargs):
+        """Verifica se o usuário é médico antes de permitir acesso"""
+        try:
+            profissional = request.user.profissional
+            if profissional.perfil != 'MEDICO':
+                messages.error(
+                    request,
+                    'Apenas médicos podem solicitar exames.'
+                )
+                return redirect('dashboard')
+        except Profissional.DoesNotExist:
+            messages.error(
+                request,
+                'Erro: Seu usuário não possui perfil de profissional vinculado.'
+            )
+            return redirect('dashboard')
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_success_url(self):
+        """Retorna para a listagem de solicitações do atendimento"""
+        return reverse('solicitacoes_exame_atendimento', kwargs={'atendimento_id': self.kwargs['atendimento_id']})
+
+    def get_context_data(self, **kwargs):
+        """Adiciona atendimento ao contexto"""
+        context = super().get_context_data(**kwargs)
+        atendimento = get_object_or_404(
+            Atendimento.objects.select_related('paciente'),
+            pk=self.kwargs['atendimento_id']
+        )
+        context['atendimento'] = atendimento
+        return context
+
+    def form_valid(self, form):
+        """Salva solicitação vinculando atendimento e profissional automaticamente"""
+        solicitacao = form.save(commit=False)
+
+        # Vincula atendimento
+        solicitacao.atendimento = get_object_or_404(Atendimento, pk=self.kwargs['atendimento_id'])
+
+        # Vincula profissional logado
+        solicitacao.profissional = self.request.user.profissional
+
+        solicitacao.save()
+
+        messages.success(
+            self.request,
+            f'Exame solicitado com sucesso: {solicitacao.nome_exame}'
+        )
+
+        return super().form_valid(form)
+
+
+class SolicitacoesExameAtendimentoView(LoginRequiredMixin, DetailView):
+    """View para listar solicitações de exames de um atendimento"""
+    model = Atendimento
+    template_name = 'prontuario/solicitacoes_exame_atendimento.html'
+    pk_url_kwarg = 'atendimento_id'
+    context_object_name = 'atendimento'
+
+    def get_queryset(self):
+        """Otimiza query com prefetch de solicitações"""
+        return Atendimento.objects.select_related(
+            'paciente',
+            'profissional_responsavel__user'
+        ).prefetch_related(
+            'solicitacoes_exame__profissional__user',
+            'solicitacoes_exame__resultado'
+        )
+
+    def get_context_data(self, **kwargs):
+        """Adiciona solicitações ao contexto"""
+        context = super().get_context_data(**kwargs)
+        context['solicitacoes'] = self.object.solicitacoes_exame.select_related(
+            'profissional__user'
+        ).prefetch_related('resultado').all()
+        context['total_solicitacoes'] = context['solicitacoes'].count()
+        context['solicitacoes_pendentes'] = context['solicitacoes'].filter(
+            status__in=['SOLICITADO', 'COLETADO']
+        ).count()
+
+        # Verifica se o usuário é médico para mostrar botão de nova solicitação
+        try:
+            context['e_medico'] = self.request.user.profissional.perfil == 'MEDICO'
+        except:
+            context['e_medico'] = False
+
+        return context
+
+
+class AdicionarResultadoExameView(LoginRequiredMixin, FormView):
+    """View para adicionar resultado a uma solicitação de exame"""
+    template_name = 'prontuario/adicionar_resultado_exame.html'
+    form_class = ResultadoExameForm
+
+    def get_success_url(self):
+        """Retorna para a listagem de solicitações do atendimento"""
+        solicitacao = get_object_or_404(SolicitacaoExame, pk=self.kwargs['solicitacao_id'])
+        return reverse('solicitacoes_exame_atendimento', kwargs={'atendimento_id': solicitacao.atendimento.id})
+
+    def get_context_data(self, **kwargs):
+        """Adiciona solicitação e atendimento ao contexto"""
+        context = super().get_context_data(**kwargs)
+        solicitacao = get_object_or_404(
+            SolicitacaoExame.objects.select_related(
+                'atendimento__paciente',
+                'profissional__user'
+            ),
+            pk=self.kwargs['solicitacao_id']
+        )
+        context['solicitacao'] = solicitacao
+        context['atendimento'] = solicitacao.atendimento
+        return context
+
+    def form_valid(self, form):
+        """Salva resultado e atualiza status da solicitação"""
+        solicitacao = get_object_or_404(SolicitacaoExame, pk=self.kwargs['solicitacao_id'])
+
+        # Verifica se já existe resultado
+        if hasattr(solicitacao, 'resultado'):
+            messages.error(
+                self.request,
+                'Esta solicitação já possui resultado registrado.'
+            )
+            return redirect('solicitacoes_exame_atendimento', atendimento_id=solicitacao.atendimento.id)
+
+        resultado = form.save(commit=False)
+        resultado.solicitacao = solicitacao
+        resultado.save()
+
+        # Atualiza status da solicitação
+        solicitacao.status = 'RESULTADO_DISPONIVEL'
+        solicitacao.save()
+
+        messages.success(
+            self.request,
+            f'Resultado registrado com sucesso para: {solicitacao.nome_exame}'
+        )
+
+        return super().form_valid(form)
+
+
+class CancelarExameView(LoginRequiredMixin, View):
+    """View para cancelar uma solicitação de exame (apenas médico solicitante)"""
+
+    def post(self, request, solicitacao_id):
+        """Cancela a solicitação de exame"""
+        solicitacao = get_object_or_404(
+            SolicitacaoExame.objects.select_related('profissional', 'atendimento'),
+            pk=solicitacao_id
+        )
+
+        # Verifica se o usuário é médico
+        try:
+            profissional = request.user.profissional
+            if profissional.perfil != 'MEDICO':
+                messages.error(request, 'Apenas médicos podem cancelar solicitações de exames.')
+                return redirect('solicitacoes_exame_atendimento', atendimento_id=solicitacao.atendimento.id)
+        except Profissional.DoesNotExist:
+            messages.error(request, 'Erro: Seu usuário não possui perfil de profissional vinculado.')
+            return redirect('dashboard')
+
+        # Verifica se já foi cancelado
+        if solicitacao.status == 'CANCELADO':
+            messages.warning(request, 'Esta solicitação já está cancelada.')
+            return redirect('solicitacoes_exame_atendimento', atendimento_id=solicitacao.atendimento.id)
+
+        # Verifica se já tem resultado
+        if hasattr(solicitacao, 'resultado'):
+            messages.error(request, 'Não é possível cancelar uma solicitação que já possui resultado.')
+            return redirect('solicitacoes_exame_atendimento', atendimento_id=solicitacao.atendimento.id)
+
+        # Cancela solicitação
+        solicitacao.status = 'CANCELADO'
+        solicitacao.save()
+
+        messages.success(request, f'Solicitação de exame cancelada: {solicitacao.nome_exame}')
+
+        return redirect('solicitacoes_exame_atendimento', atendimento_id=solicitacao.atendimento.id)
