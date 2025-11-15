@@ -1,6 +1,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Evolucao, SinalVital
+from django.forms import inlineformset_factory
+from datetime import date, timedelta
+from .models import Evolucao, SinalVital, Prescricao, ItemPrescricao
 
 
 class EvolucaoForm(forms.ModelForm):
@@ -125,3 +127,83 @@ class SinalVitalForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class PrescricaoForm(forms.ModelForm):
+    """Formulário para registro de prescrição médica"""
+
+    class Meta:
+        model = Prescricao
+        fields = ['validade', 'observacoes']
+        widgets = {
+            'validade': forms.DateInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'type': 'date',
+            }),
+            'observacoes': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Observações gerais sobre a prescrição (opcional)...',
+                'rows': 3
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Define validade padrão para 7 dias à frente
+        if not self.instance.pk:
+            self.fields['validade'].initial = date.today() + timedelta(days=7)
+
+    def clean_validade(self):
+        """Valida que a validade não é anterior à data atual"""
+        validade = self.cleaned_data.get('validade')
+        if validade and validade < date.today():
+            raise ValidationError('A validade não pode ser anterior à data atual.')
+        return validade
+
+
+class ItemPrescricaoForm(forms.ModelForm):
+    """Formulário para itens individuais da prescrição"""
+
+    class Meta:
+        model = ItemPrescricao
+        fields = ['medicamento', 'dose', 'via', 'frequencia', 'duracao_dias', 'observacoes_item']
+        widgets = {
+            'medicamento': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Ex: Dipirona 500mg'
+            }),
+            'dose': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Ex: 1 comprimido, 10ml'
+            }),
+            'via': forms.Select(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+            }),
+            'frequencia': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Ex: 8/8h, 12/12h, 1x ao dia'
+            }),
+            'duracao_dias': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Ex: 7',
+                'min': '1',
+                'max': '365'
+            }),
+            'observacoes_item': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Instruções específicas (opcional)...',
+                'rows': 2
+            }),
+        }
+
+
+# FormSet para permitir múltiplos medicamentos em uma prescrição
+ItemPrescricaoFormSet = inlineformset_factory(
+    Prescricao,
+    ItemPrescricao,
+    form=ItemPrescricaoForm,
+    extra=1,  # Começa com 1 formulário vazio
+    min_num=1,  # Requer ao menos 1 medicamento
+    validate_min=True,
+    can_delete=True
+)
