@@ -2,20 +2,37 @@
 
 Sistema de Rastreamento de Status de Pacientes no Pronto-Socorro. Este é um projeto acadêmico (PBL) que visa criar um MVP para resolver a fragmentação de informações clínicas em tempo real.
 
+## 🏗️ Arquitetura Modular
+
+O projeto segue uma **arquitetura modular** dividida em 4 apps Django especializados:
+
+- **`pacientes`**: Gerencia dados dos pacientes (prontuário eletrônico)
+- **`usuarios`**: Gerencia profissionais e sistema de autenticação
+- **`atendimentos`**: Gerencia o fluxo de atendimentos no pronto-socorro
+- **`prontuario`**: Gerencia evoluções clínicas e registros médicos
+- **`ia`**: Centraliza e gerencia toda a lógica e integração de inteligência artificial na aplicação
+
+Esta separação proporciona **maior organização, escalabilidade e clareza** no desenvolvimento.
+
 ## ✅ Funcionalidades Implementadas
 
-O projeto já conta com um conjunto robusto de funcionalidades divididas em duas fases principais:
+O projeto já conta com um conjunto robusto de funcionalidades divididas em três fases principais:
 
-**FASE 1: Autenticação e Perfis**
+**FASE 1: Autenticação e Perfis** ✅
 - Sistema de login e logout seguro com perfis de usuário (Médico, Enfermeiro, Administrativo).
 - Proteção de todas as rotas, garantindo que apenas usuários autenticados acessem o sistema.
 - Rastreabilidade de ações, vinculando cada atendimento ao profissional responsável.
 
-**FASE 2: Prontuário Eletrônico do Paciente**
+**FASE 2: Prontuário Eletrônico do Paciente** ✅
 - Cadastro de paciente expandido para um prontuário completo, com dados pessoais, documentos, endereço e informações clínicas.
 - Validações robustas em campos como CPF, Cartão SUS, CEP e telefone para garantir a integridade dos dados.
 - Dashboard principal que exibe todos os pacientes em atendimento e seus status atuais.
 - Funcionalidade para atualizar o status do paciente (ex: de "Triagem" para "Em Atendimento").
+
+**FASE 3: Evolução Clínica** ✅
+- Registro de evoluções clínicas por profissionais (Anamnese, Evolução Médica, Evolução de Enfermagem, Exame Físico).
+- Timeline cronológica completa por atendimento.
+- Distinção visual para diferentes tipos de evolução.
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -86,9 +103,9 @@ docker-compose logs -f web
 
 ## 🎯 Status e Próximos Passos
 
-Atualmente, as fases de **Autenticação** e **Prontuário do Paciente** estão completas.
+Atualmente, as fases de **Autenticação**, **Prontuário do Paciente** e **Evolução Clínica** estão completas.
 
-O próximo foco crítico do projeto é a **FASE 3: Evolução Clínica**. Esta fase é o coração do prontuário eletrônico e permitirá que a equipe médica registre o progresso do atendimento, transformando o sistema em uma ferramenta clínica funcional.
+O próximo foco crítico do projeto é a **FASE 4: Sinais Vitais**. Esta fase permitirá o registro estruturado de sinais vitais (pressão arterial, temperatura, frequência cardíaca, etc.), digitalizando outra parte crucial do atendimento e permitindo o acompanhamento da evolução do paciente de forma estruturada.
 
 ## 👨‍💻 Autor
 

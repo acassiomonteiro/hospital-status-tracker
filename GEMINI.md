@@ -9,6 +9,7 @@ The application allows for:
 - Creating and managing patient attendances.
 - Tracking patient status through a 7-stage workflow.
 - User authentication with three distinct professional profiles (Doctor, Nurse, Admin).
+- Clinical evolution tracking with timestamped notes.
 
 ---
 
@@ -18,6 +19,43 @@ The application allows for:
 - **Database**: PostgreSQL (managed via Docker Compose)
 - **Frontend**: Django Templates + Tailwind CSS 3.x (via CDN)
 - **Containerization & Deployment**: Docker + Docker Compose
+
+---
+
+## Modular Architecture
+
+The project follows a **modular architecture** with 4 specialized Django apps:
+
+1. **`pacientes`** (Patients)
+   - Manages patient data (electronic medical record)
+   - Model: `Paciente`
+
+2. **`usuarios`** (Users)
+   - Handles professional profiles and authentication
+   - Model: `Profissional`
+   - Views: `CustomLoginView`, `CustomLogoutView`
+
+3. **`atendimentos`** (Attendances)
+   - Manages emergency room patient flow
+   - Model: `Atendimento`
+   - Views: `DashboardView`, `NovoAtendimentoView`, `AtualizarStatusView`
+
+4. **`prontuario`** (Medical Records)
+   - Handles clinical evolution notes
+   - Model: `Evolucao`
+   - Views: `NovaEvolucaoView`, `EvolucoesAtendimentoView`
+
+**App Dependencies:**
+```
+usuarios (Profissional)
+    ↓
+pacientes (Paciente) → atendimentos (Atendimento) → prontuario (Evolucao)
+```
+
+**Key Relationships:**
+- `Atendimento` references `Paciente` and `Profissional`
+- `Evolucao` references `Atendimento` and `Profissional`
+- All ForeignKeys use `on_delete=PROTECT` for data safety
 
 ---
 
@@ -62,6 +100,15 @@ While Docker is preferred, a local setup is also possible.
 
 - **Language**: All code (models, variables, etc.) is written in **Portuguese**.
 - **Style**: PEP 8 with a line limit of 100 characters.
+- **Cross-App Imports**: Always use absolute imports when importing from other apps:
+    ```python
+    # Correct
+    from pacientes.models import Paciente
+    from usuarios.models import Profissional
+
+    # Incorrect
+    from ..pacientes.models import Paciente
+    ```
 - **Models**:
     - Use `verbose_name` in Portuguese for all fields.
     - Use `on_delete=models.PROTECT` for ForeignKeys to prevent accidental data loss.
@@ -81,6 +128,7 @@ While Docker is preferred, a local setup is also possible.
 - **✅ Phase 1: Authentication (Complete)**: User login/logout and professional profiles are implemented.
 - **✅ Phase 2: Patient Data (Complete)**: The `Paciente` model has been expanded into a full electronic record.
 - **✅ Phase 3: Clinical Evolution (Complete)**: Staff can now record clinical notes, creating a timeline for each attendance.
+- **🔄 Architectural Refactoring (November 2025)**: Project refactored from monolithic app to 4 specialized apps for better organization and scalability. All data preserved.
 - **🎯 NEXT UP - Phase 4: Vital Signs (Critical)**: The next priority is to implement the recording of vital signs for patients.
 
 ---
