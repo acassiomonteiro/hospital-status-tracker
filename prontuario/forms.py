@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 from datetime import date, timedelta
-from .models import Evolucao, SinalVital, Prescricao, ItemPrescricao
+from .models import Evolucao, SinalVital, Prescricao, ItemPrescricao, SolicitacaoExame, ResultadoExame
 
 
 class EvolucaoForm(forms.ModelForm):
@@ -207,3 +207,71 @@ ItemPrescricaoFormSet = inlineformset_factory(
     validate_min=True,
     can_delete=True
 )
+
+
+class SolicitacaoExameForm(forms.ModelForm):
+    """Formulário para solicitação de exames"""
+
+    class Meta:
+        model = SolicitacaoExame
+        fields = ['tipo', 'nome_exame', 'justificativa']
+        widgets = {
+            'tipo': forms.Select(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+            }),
+            'nome_exame': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Ex: Hemograma completo, Raio-X de tórax'
+            }),
+            'justificativa': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Descreva a justificativa clínica para a solicitação deste exame...',
+                'rows': 4
+            }),
+        }
+
+
+class ResultadoExameForm(forms.ModelForm):
+    """Formulário para registro de resultado de exame"""
+
+    class Meta:
+        model = ResultadoExame
+        fields = ['resultado_texto', 'arquivo_laudo', 'observacoes']
+        widgets = {
+            'resultado_texto': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Descreva o resultado do exame...',
+                'rows': 6
+            }),
+            'arquivo_laudo': forms.FileInput(attrs={
+                'class': 'mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100',
+                'accept': '.pdf,.jpg,.jpeg,.png'
+            }),
+            'observacoes': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                'placeholder': 'Observações adicionais sobre o resultado (opcional)...',
+                'rows': 3
+            }),
+        }
+
+    def clean_arquivo_laudo(self):
+        """Valida o tipo e tamanho do arquivo enviado"""
+        arquivo = self.cleaned_data.get('arquivo_laudo')
+
+        if arquivo:
+            # Valida extensão do arquivo
+            extensoes_validas = ['.pdf', '.jpg', '.jpeg', '.png']
+            nome_arquivo = arquivo.name.lower()
+            if not any(nome_arquivo.endswith(ext) for ext in extensoes_validas):
+                raise ValidationError(
+                    'Apenas arquivos PDF e imagens (JPG, PNG) são permitidos.'
+                )
+
+            # Valida tamanho (max 10MB)
+            max_size = 10 * 1024 * 1024  # 10MB em bytes
+            if arquivo.size > max_size:
+                raise ValidationError(
+                    'O arquivo não pode exceder 10MB.'
+                )
+
+        return arquivo
