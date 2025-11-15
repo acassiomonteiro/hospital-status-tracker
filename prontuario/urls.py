@@ -13,4 +13,10 @@ urlpatterns = [
     # Prescrições Médicas
     path('atendimento/<int:atendimento_id>/prescricoes/', views.PrescricoesAtendimentoView.as_view(), name='prescricoes_atendimento'),
     path('atendimento/<int:atendimento_id>/prescricao/nova/', views.NovaPrescricaoView.as_view(), name='nova_prescricao'),
+
+    # Exames
+    path('atendimento/<int:atendimento_id>/exames/', views.SolicitacoesExameAtendimentoView.as_view(), name='solicitacoes_exame_atendimento'),
+    path('atendimento/<int:atendimento_id>/exame/solicitar/', views.NovaSolicitacaoExameView.as_view(), name='nova_solicitacao_exame'),
+    path('exame/<int:solicitacao_id>/resultado/', views.AdicionarResultadoExameView.as_view(), name='adicionar_resultado_exame'),
+    path('exame/<int:solicitacao_id>/cancelar/', views.CancelarExameView.as_view(), name='cancelar_exame'),
 ]
