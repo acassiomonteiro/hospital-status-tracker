@@ -58,12 +58,12 @@ hospital-status-tracker/
 │           ├── dashboard.html  # Lista de atendimentos
 │           ├── novo_atendimento.html
 │           └── atualizar_status.html
-├── prontuario/                  # App de Prontuário (Evoluções Clínicas e Sinais Vitais)
-│   ├── models.py               # Models: Evolucao, SinalVital
-│   ├── views.py                # NovaEvolucaoView, EvolucoesAtendimentoView, NovoSinalVitalView, SinaisVitaisAtendimentoView
-│   ├── urls.py                 # Rotas: evolucoes, sinais-vitais
-│   ├── forms.py                # EvolucaoForm, SinalVitalForm
-│   ├── admin.py                # EvolucaoAdmin, SinalVitalAdmin
+├── prontuario/                  # App de Prontuário (Evoluções, Sinais Vitais e Prescrições)
+│   ├── models.py               # Models: Evolucao, SinalVital, Prescricao, ItemPrescricao
+│   ├── views.py                # NovaEvolucaoView, EvolucoesAtendimentoView, NovoSinalVitalView, SinaisVitaisAtendimentoView, NovaPrescricaoView, PrescricoesAtendimentoView
+│   ├── urls.py                 # Rotas: evolucoes, sinais-vitais, prescricoes
+│   ├── forms.py                # EvolucaoForm, SinalVitalForm, PrescricaoForm, ItemPrescricaoFormSet
+│   ├── admin.py                # EvolucaoAdmin, SinalVitalAdmin, PrescricaoAdmin
 │   ├── apps.py
 │   ├── migrations/
 │   └── templates/
@@ -73,7 +73,9 @@ hospital-status-tracker/
 │       │   └── evolucoes_atendimento.html
 │       └── prontuario/
 │           ├── novo_sinal_vital.html
-│           └── sinais_vitais_atendimento.html
+│           ├── sinais_vitais_atendimento.html
+│           ├── nova_prescricao.html
+│           └── prescricoes_atendimento.html
 └── staticfiles/                # Arquivos estáticos coletados
 ```
 
@@ -103,11 +105,15 @@ pacientes (Paciente)    →    atendimentos (Atendimento)    →    prontuario (
 - `Evolucao` → `Profissional` (ForeignKey)
 - `SinalVital` → `Atendimento` (ForeignKey)
 - `SinalVital` → `Profissional` (ForeignKey)
+- `Prescricao` → `Atendimento` (ForeignKey)
+- `Prescricao` → `Profissional` (ForeignKey)
+- `ItemPrescricao` → `Prescricao` (ForeignKey, CASCADE)
 
 **Fluxo de Dados:**
 1. **Cadastro**: Profissional → Paciente → Atendimento
-2. **Acompanhamento**: Atendimento → Múltiplas Evoluções + Múltiplos Sinais Vitais
+2. **Acompanhamento**: Atendimento → Múltiplas Evoluções + Múltiplos Sinais Vitais + Múltiplas Prescrições
 3. **Auditoria**: Todas as ações rastreáveis pelo Profissional
+4. **Segregação**: Prescrições somente por perfil MEDICO
 
 **Configuração em settings.py:**
 ```python
@@ -237,6 +243,54 @@ INSTALLED_APPS = [
   - Hipotermia (<36°C) / Febre (>37.5°C)
   - Saturação baixa (<95%)
 
+### Prescricao ✅ Implementado
+- `atendimento`: ForeignKey → Atendimento (PROTECT)
+- `profissional`: ForeignKey → Profissional (PROTECT)
+- `data_prescricao`: DateTimeField (auto_now_add)
+- `validade`: DateField
+- `status`: CharField (choices: ATIVA, SUSPENSA, CONCLUIDA, default: ATIVA)
+- `observacoes`: TextField (opcional)
+
+**Status disponíveis:**
+1. ATIVA
+2. SUSPENSA
+3. CONCLUIDA
+
+**Métodos:**
+- `get_status_badge_class()`: Retorna classe Tailwind por status
+- `total_itens()`: Retorna total de medicamentos prescritos
+
+**Restrições:**
+- **Apenas perfil MEDICO pode criar prescrições**
+- Validação no método `dispatch()` da view `NovaPrescricaoView`
+- Botão de nova prescrição visível apenas para médicos
+
+### ItemPrescricao ✅ Implementado
+- `prescricao`: ForeignKey → Prescricao (CASCADE)
+- `medicamento`: CharField (200 chars)
+- `dose`: CharField (100 chars)
+- `via`: CharField (choices com 10 opções)
+- `frequencia`: CharField (100 chars)
+- `duracao_dias`: PositiveSmallIntegerField (1-365)
+- `observacoes_item`: TextField (opcional)
+
+**Vias de Administração disponíveis:**
+1. ORAL
+2. INTRAVENOSA (IV)
+3. INTRAMUSCULAR (IM)
+4. SUBCUTANEA (SC)
+5. TOPICA
+6. INALATORIA
+7. SUBLINGUAL
+8. RETAL
+9. OCULAR
+10. NASAL
+
+**Validações:**
+- Mínimo de 1 medicamento por prescrição (via FormSet)
+- Duração entre 1 e 365 dias
+- Validade não pode ser anterior à data atual
+
 ---
 
 ## Padrões de Código
@@ -336,6 +390,8 @@ paciente, created = Paciente.objects.get_or_create(
 - `/atendimento/<id>/evolucao/nova/` - Registrar nova evolução
 - `/atendimento/<id>/sinais-vitais/` - Timeline de sinais vitais
 - `/atendimento/<id>/sinais-vitais/novo/` - Registrar novos sinais vitais
+- `/atendimento/<id>/prescricoes/` - Timeline de prescrições médicas
+- `/atendimento/<id>/prescricao/nova/` - Criar nova prescrição (MÉDICOS APENAS)
 
 **Admin:**
 - `/admin/` - Interface administrativa Django
@@ -483,22 +539,29 @@ docker-compose exec db psql -U hospital_admin -d hospital_db
 
 ---
 
-### 🟡 FASE 5: PRESCRIÇÕES MÉDICAS (PRÓXIMA - PRIORIDADE ALTA)
+### ✅ FASE 5: PRESCRIÇÕES MÉDICAS (COMPLETA)
 
-- [ ] Model Prescricao (atendimento, profissional, data, validade)
-- [ ] Model ItemPrescricao (medicamento, dose, via, frequência, duração)
-- [ ] Form de prescrição
-- [ ] Listagem de prescrições ativas
-- [ ] Verificação de alergias ao prescrever
+**Por que é crítica:** Implementa segregação de acesso por perfil profissional, garantindo que apenas médicos possam prescrever medicamentos, com rastreabilidade completa e verificação automática de alergias.
+
+- [x] Model Prescricao (atendimento, profissional, data_prescricao, validade, status)
+- [x] Model ItemPrescricao (medicamento, dose, via, frequência, duração_dias)
+- [x] FormSet dinâmico para múltiplos medicamentos
+- [x] Restrição de acesso: apenas perfil MEDICO pode criar prescrições
+- [x] Timeline de prescrições por atendimento
+- [x] Alerta visual destacado quando paciente possui alergias
+- [x] Status de prescrição (ATIVA, SUSPENSA, CONCLUIDA)
+- [x] Integração com dashboard (botão + badge visível conforme perfil)
+- [x] 10 vias de administração disponíveis
+- [x] Validações: validade futura, mínimo 1 medicamento
 
 **Problema da PBL que resolve:**
 > "Políticas de acesso não refletem necessidade de segregação por perfil"
 
-✅ Só médico prescreve, registro auditável, alergias visíveis.
+✅ Apenas médicos podem prescrever, registro auditável com profissional vinculado, alergias destacadas em vermelho durante prescrição.
 
 ---
 
-### 🟢 FASE 6: EXAMES (DESEJÁVEL)
+### 🟡 FASE 6: EXAMES (PRÓXIMA - DESEJÁVEL)
 
 - [ ] Model SolicitacaoExame (tipo, nome, justificativa, status)
 - [ ] Model ResultadoExame (resultado, arquivo_laudo, data)
@@ -556,11 +619,20 @@ docker-compose exec db psql -U hospital_admin -d hospital_db
 - Timeline visual com ícones coloridos
 - Integração completa com dashboard
 
+**FASE 5 - Prescrições Médicas:** ✅ COMPLETA
+- Prescrição de múltiplos medicamentos por atendimento
+- **Restrição de acesso: apenas perfil MEDICO**
+- Alerta visual de alergias destacado durante prescrição
+- FormSet dinâmico (adicionar/remover medicamentos)
+- Timeline de prescrições com status (ativa/suspensa/concluída)
+- 10 vias de administração disponíveis
+- Integração com dashboard (botão visível apenas para médicos)
+
 ### 🎯 Próximo Passo
 
-**FASE 5 - Prescrições Médicas** (Prioridade Alta)
+**FASE 6 - Exames** (Desejável)
 
-O próximo passo é implementar o sistema de prescrições médicas, permitindo que médicos prescrevam medicamentos com verificação automática de alergias, segregação por perfil e registro auditável.
+O próximo passo é implementar o sistema de solicitação e acompanhamento de exames laboratoriais e de imagem, centralizando solicitações e resultados que hoje ficam fragmentados em portais de terceiros.
 
 ---
 
