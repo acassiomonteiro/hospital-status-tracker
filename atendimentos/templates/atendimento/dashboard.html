@@ -55,7 +55,22 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div class="flex flex-col space-y-1">
-                        <a href="{% url 'evolucoes_atendimento' atendimento.id %}" class="text-green-600 hover:text-green-900">Ver Evoluções</a>
+                        <a href="{% url 'evolucoes_atendimento' atendimento.id %}" class="text-green-600 hover:text-green-900 flex items-center">
+                            Ver Evoluções
+                            {% if atendimento.evolucoes.count > 0 %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                {{ atendimento.evolucoes.count }}
+                            </span>
+                            {% endif %}
+                        </a>
+                        <a href="{% url 'sinais_vitais_atendimento' atendimento.id %}" class="text-purple-600 hover:text-purple-900 flex items-center">
+                            Ver Sinais Vitais
+                            {% if atendimento.sinais_vitais.count > 0 %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                {{ atendimento.sinais_vitais.count }}
+                            </span>
+                            {% endif %}
+                        </a>
                         <a href="{% url 'atualizar_status' atendimento.id %}" class="text-blue-600 hover:text-blue-900">Atualizar Status</a>
                     </div>
                 </td>

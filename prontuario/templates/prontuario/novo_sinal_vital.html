@@ -1,0 +1,194 @@
+{% extends 'atendimento/base.html' %}
+
+{% block title %}Novos Sinais Vitais - {{ atendimento.paciente.nome }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Registrar Sinais Vitais</h2>
+            <p class="text-gray-600 mt-2">
+                Paciente: <span class="font-semibold">{{ atendimento.paciente.nome }}</span> (CPF: {{ atendimento.paciente.cpf }})
+            </p>
+            <p class="text-gray-600 text-sm">
+                Atendimento iniciado em {{ atendimento.data_hora_entrada|date:"d/m/Y às H:i" }}
+            </p>
+        </div>
+        <a href="{% url 'sinais_vitais_atendimento' atendimento.id %}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Ver Timeline
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-md p-6">
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Erros não específicos de campo -->
+        {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700">{{ form.non_field_errors.0 }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Pressão Arterial -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Pressão Arterial</h3>
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                    <label for="{{ form.pressao_arterial_sistolica.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.pressao_arterial_sistolica.label }}
+                    </label>
+                    {{ form.pressao_arterial_sistolica }}
+                    {% if form.pressao_arterial_sistolica.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.pressao_arterial_sistolica.help_text }}</p>
+                    {% endif %}
+                    {% if form.pressao_arterial_sistolica.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.pressao_arterial_sistolica.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.pressao_arterial_diastolica.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.pressao_arterial_diastolica.label }}
+                    </label>
+                    {{ form.pressao_arterial_diastolica }}
+                    {% if form.pressao_arterial_diastolica.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.pressao_arterial_diastolica.help_text }}</p>
+                    {% endif %}
+                    {% if form.pressao_arterial_diastolica.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.pressao_arterial_diastolica.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Frequências -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Frequências</h3>
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                    <label for="{{ form.frequencia_cardiaca.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.frequencia_cardiaca.label }}
+                    </label>
+                    {{ form.frequencia_cardiaca }}
+                    {% if form.frequencia_cardiaca.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.frequencia_cardiaca.help_text }}</p>
+                    {% endif %}
+                    {% if form.frequencia_cardiaca.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.frequencia_cardiaca.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.frequencia_respiratoria.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.frequencia_respiratoria.label }}
+                    </label>
+                    {{ form.frequencia_respiratoria }}
+                    {% if form.frequencia_respiratoria.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.frequencia_respiratoria.help_text }}</p>
+                    {% endif %}
+                    {% if form.frequencia_respiratoria.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.frequencia_respiratoria.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Outros Sinais -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Outros Parâmetros</h3>
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <div>
+                    <label for="{{ form.temperatura.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.temperatura.label }}
+                    </label>
+                    {{ form.temperatura }}
+                    {% if form.temperatura.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.temperatura.help_text }}</p>
+                    {% endif %}
+                    {% if form.temperatura.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.temperatura.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.saturacao_o2.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.saturacao_o2.label }}
+                    </label>
+                    {{ form.saturacao_o2 }}
+                    {% if form.saturacao_o2.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.saturacao_o2.help_text }}</p>
+                    {% endif %}
+                    {% if form.saturacao_o2.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.saturacao_o2.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.glicemia.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.glicemia.label }}
+                    </label>
+                    {{ form.glicemia }}
+                    {% if form.glicemia.help_text %}
+                        <p class="mt-1 text-xs text-gray-500">{{ form.glicemia.help_text }}</p>
+                    {% endif %}
+                    {% if form.glicemia.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.glicemia.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Observações -->
+        <div>
+            <label for="{{ form.observacoes.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.observacoes.label }}
+            </label>
+            {{ form.observacoes }}
+            {% if form.observacoes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.observacoes.errors.0 }}</p>
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">
+                Profissional: {{ request.user.get_full_name|default:request.user.username }} - {{ request.user.profissional.get_perfil_display }}
+            </p>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3">
+            <a href="{% url 'sinais_vitais_atendimento' atendimento.id %}"
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                Cancelar
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Registrar Sinais Vitais
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-blue-700">
+                <strong>Importante:</strong> Preencha ao menos um sinal vital. O sistema alertará automaticamente se houver valores fora dos parâmetros normais.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

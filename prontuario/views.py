@@ -5,8 +5,8 @@ from django.views.generic import FormView, DetailView
 from django.urls import reverse
 from atendimentos.models import Atendimento
 from usuarios.models import Profissional
-from .models import Evolucao
-from .forms import EvolucaoForm
+from .models import Evolucao, SinalVital
+from .forms import EvolucaoForm, SinalVitalForm
 
 
 class NovaEvolucaoView(LoginRequiredMixin, FormView):
@@ -78,4 +78,84 @@ class EvolucoesAtendimentoView(LoginRequiredMixin, DetailView):
             'profissional__user'
         ).all()  # Já ordenado por -data_hora no Model Meta
         context['total_evolucoes'] = context['evolucoes'].count()
+        return context
+
+
+class NovoSinalVitalView(LoginRequiredMixin, FormView):
+    """View para adicionar novo registro de sinais vitais a um atendimento"""
+    template_name = 'prontuario/novo_sinal_vital.html'
+    form_class = SinalVitalForm
+
+    def get_success_url(self):
+        """Retorna para a timeline de sinais vitais do atendimento"""
+        return reverse('sinais_vitais_atendimento', kwargs={'atendimento_id': self.kwargs['atendimento_id']})
+
+    def get_context_data(self, **kwargs):
+        """Adiciona atendimento ao contexto"""
+        context = super().get_context_data(**kwargs)
+        atendimento = get_object_or_404(
+            Atendimento.objects.select_related('paciente'),
+            pk=self.kwargs['atendimento_id']
+        )
+        context['atendimento'] = atendimento
+        return context
+
+    def form_valid(self, form):
+        """Salva sinal vital vinculando atendimento e profissional automaticamente"""
+        sinal_vital = form.save(commit=False)
+
+        # Vincula atendimento
+        sinal_vital.atendimento = get_object_or_404(Atendimento, pk=self.kwargs['atendimento_id'])
+
+        # Vincula profissional logado
+        try:
+            sinal_vital.profissional = self.request.user.profissional
+        except Profissional.DoesNotExist:
+            messages.error(
+                self.request,
+                'Erro: Seu usuário não possui perfil de profissional vinculado.'
+            )
+            return redirect('dashboard')
+
+        sinal_vital.save()
+
+        # Verifica se há sinais alterados e exibe alertas
+        alertas = sinal_vital.tem_sinais_alterados()
+        if alertas:
+            messages.warning(
+                self.request,
+                f'Sinais vitais registrados com alertas: {", ".join(alertas)}'
+            )
+        else:
+            messages.success(
+                self.request,
+                'Sinais vitais registrados com sucesso!'
+            )
+
+        return super().form_valid(form)
+
+
+class SinaisVitaisAtendimentoView(LoginRequiredMixin, DetailView):
+    """View para listar timeline de sinais vitais de um atendimento"""
+    model = Atendimento
+    template_name = 'prontuario/sinais_vitais_atendimento.html'
+    pk_url_kwarg = 'atendimento_id'
+    context_object_name = 'atendimento'
+
+    def get_queryset(self):
+        """Otimiza query com prefetch de sinais vitais"""
+        return Atendimento.objects.select_related(
+            'paciente',
+            'profissional_responsavel__user'
+        ).prefetch_related(
+            'sinais_vitais__profissional__user'
+        )
+
+    def get_context_data(self, **kwargs):
+        """Adiciona sinais vitais ao contexto (ordem cronológica reversa)"""
+        context = super().get_context_data(**kwargs)
+        context['sinais_vitais'] = self.object.sinais_vitais.select_related(
+            'profissional__user'
+        ).all()  # Já ordenado por -data_hora no Model Meta
+        context['total_sinais_vitais'] = context['sinais_vitais'].count()
         return context

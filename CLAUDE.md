@@ -25,24 +25,104 @@ hospital-status-tracker/
 ├── entrypoint.sh                # Script de inicialização (migrations automáticas)
 ├── core/                        # Configuração Django
 │   ├── settings.py             # Configurações principais (PostgreSQL)
-│   ├── urls.py                 # URL raiz (inclui atendimento.urls)
+│   ├── urls.py                 # URL raiz (inclui urls dos 4 apps)
 │   ├── wsgi.py
 │   └── asgi.py
-├── atendimento/                # App principal
-│   ├── models.py               # Paciente, Atendimento, Profissional
-│   ├── views.py                # CBVs: Dashboard, Novo, Atualizar, Login, Logout
-│   ├── urls.py                 # Rotas: /, /novo/, /atualizar/<id>/, /login/, /logout/
-│   ├── forms.py                # PacienteForm, AtendimentoForm
-│   ├── admin.py                # Config admin Django
+├── pacientes/                   # App de Pacientes
+│   ├── models.py               # Model Paciente (prontuário eletrônico)
+│   ├── forms.py                # PacienteForm
+│   ├── admin.py                # PacienteAdmin
+│   ├── apps.py
+│   └── migrations/
+├── usuarios/                    # App de Usuários e Autenticação
+│   ├── models.py               # Model Profissional
+│   ├── views.py                # CustomLoginView, CustomLogoutView
+│   ├── urls.py                 # Rotas: /login/, /logout/
+│   ├── admin.py                # ProfissionalAdmin
+│   ├── apps.py
+│   ├── migrations/
 │   └── templates/
-│       ├── atendimento/
-│       │   ├── base.html       # Template base com Tailwind + Navbar
-│       │   ├── dashboard.html  # Lista de atendimentos
-│       │   ├── novo_atendimento.html
-│       │   └── atualizar_status.html
 │       └── registration/
 │           └── login.html      # Template de login
+├── atendimentos/                # App de Atendimentos
+│   ├── models.py               # Model Atendimento
+│   ├── views.py                # DashboardView, NovoAtendimentoView, AtualizarStatusView
+│   ├── urls.py                 # Rotas: /, /novo/, /atualizar/<id>/
+│   ├── forms.py                # AtendimentoForm
+│   ├── admin.py                # AtendimentoAdmin
+│   ├── apps.py
+│   ├── migrations/
+│   └── templates/
+│       └── atendimento/
+│           ├── base.html       # Template base com Tailwind + Navbar
+│           ├── dashboard.html  # Lista de atendimentos
+│           ├── novo_atendimento.html
+│           └── atualizar_status.html
+├── prontuario/                  # App de Prontuário (Evoluções Clínicas e Sinais Vitais)
+│   ├── models.py               # Models: Evolucao, SinalVital
+│   ├── views.py                # NovaEvolucaoView, EvolucoesAtendimentoView, NovoSinalVitalView, SinaisVitaisAtendimentoView
+│   ├── urls.py                 # Rotas: evolucoes, sinais-vitais
+│   ├── forms.py                # EvolucaoForm, SinalVitalForm
+│   ├── admin.py                # EvolucaoAdmin, SinalVitalAdmin
+│   ├── apps.py
+│   ├── migrations/
+│   └── templates/
+│       ├── atendimento/
+│       │   ├── base.html       # Template base (compartilhado)
+│       │   ├── nova_evolucao.html
+│       │   └── evolucoes_atendimento.html
+│       └── prontuario/
+│           ├── novo_sinal_vital.html
+│           └── sinais_vitais_atendimento.html
 └── staticfiles/                # Arquivos estáticos coletados
+```
+
+**Arquitetura Modular:**
+O projeto foi refatorado de um app monolítico (`atendimento`) para **4 apps especializados** por domínio:
+- **`pacientes`**: Gerencia dados dos pacientes (prontuário eletrônico)
+- **`usuarios`**: Gerencia profissionais e autenticação
+- **`atendimentos`**: Gerencia fluxo de atendimentos no pronto-socorro
+- **`prontuario`**: Gerencia evoluções clínicas e registros médicos
+
+
+---
+
+## Arquitetura e Relacionamentos
+
+### Diagrama de Dependências
+```
+usuarios (Profissional)
+    ↓
+pacientes (Paciente)    →    atendimentos (Atendimento)    →    prontuario (Evolucao)
+```
+
+**Relacionamentos entre Models:**
+- `Atendimento` → `Paciente` (ForeignKey)
+- `Atendimento` → `Profissional` (ForeignKey, opcional)
+- `Evolucao` → `Atendimento` (ForeignKey)
+- `Evolucao` → `Profissional` (ForeignKey)
+- `SinalVital` → `Atendimento` (ForeignKey)
+- `SinalVital` → `Profissional` (ForeignKey)
+
+**Fluxo de Dados:**
+1. **Cadastro**: Profissional → Paciente → Atendimento
+2. **Acompanhamento**: Atendimento → Múltiplas Evoluções + Múltiplos Sinais Vitais
+3. **Auditoria**: Todas as ações rastreáveis pelo Profissional
+
+**Configuração em settings.py:**
+```python
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'pacientes',      # Base de dados de pacientes
+    'usuarios',       # Autenticação e perfis profissionais
+    'atendimentos',   # Fluxo de atendimentos
+    'prontuario',     # Registros clínicos
+]
 ```
 
 ---
@@ -131,6 +211,32 @@ hospital-status-tracker/
 **Métodos:**
 - `get_tipo_badge_class()`: Retorna classe Tailwind por tipo de evolução
 
+### SinalVital ✅ Implementado
+- `atendimento`: ForeignKey → Atendimento (PROTECT)
+- `profissional`: ForeignKey → Profissional (PROTECT)
+- `pressao_arterial_sistolica`: PositiveSmallIntegerField (50-300 mmHg, opcional)
+- `pressao_arterial_diastolica`: PositiveSmallIntegerField (30-200 mmHg, opcional)
+- `frequencia_cardiaca`: PositiveSmallIntegerField (30-250 bpm, opcional)
+- `frequencia_respiratoria`: PositiveSmallIntegerField (8-60 irpm, opcional)
+- `temperatura`: DecimalField (32.0-45.0 °C, opcional)
+- `saturacao_o2`: PositiveSmallIntegerField (50-100%, opcional)
+- `glicemia`: PositiveSmallIntegerField (20-600 mg/dL, opcional)
+- `observacoes`: TextField (opcional)
+- `data_hora`: DateTimeField (auto_now_add)
+
+**Validações:**
+- Ao menos um sinal vital deve ser preenchido
+- Pressão sistólica > diastólica (validação de coerência)
+- Ranges clínicos realistas com MinValueValidator/MaxValueValidator
+
+**Métodos:**
+- `get_pressao_arterial()`: Retorna pressão formatada (ex: "120/80")
+- `tem_sinais_alterados()`: Lista alertas automáticos baseados em parâmetros normais
+  - Pressão elevada (>140/90)
+  - Bradicardia (<60 bpm) / Taquicardia (>100 bpm)
+  - Hipotermia (<36°C) / Febre (>37.5°C)
+  - Saturação baixa (<95%)
+
 ---
 
 ## Padrões de Código
@@ -139,6 +245,15 @@ hospital-status-tracker/
 - **Idioma**: Nomes de models, campos e variáveis em português
 - **Style Guide**: PEP 8 (linhas até 100 chars)
 - **Imports**: Ordem padrão Django (stdlib → django → terceiros → local)
+- **Imports entre Apps**: Usar caminhos absolutos para importar de outros apps
+  ```python
+  # Correto
+  from pacientes.models import Paciente
+  from usuarios.models import Profissional
+
+  # Incorreto
+  from ..pacientes.models import Paciente
+  ```
 
 ### Models
 - Sempre usar `verbose_name` em português
@@ -204,6 +319,26 @@ paciente, created = Paciente.objects.get_or_create(
     defaults={'nome': nome, 'data_nascimento': data_nascimento}
 )
 ```
+
+### Rotas Implementadas
+
+**Autenticação (app: usuarios):**
+- `/login/` - Login de profissionais
+- `/logout/` - Logout
+
+**Atendimentos (app: atendimentos):**
+- `/` - Dashboard de atendimentos
+- `/novo/` - Novo atendimento
+- `/atualizar/<id>/` - Atualizar status do atendimento
+
+**Prontuário (app: prontuario):**
+- `/atendimento/<id>/evolucoes/` - Timeline de evoluções clínicas
+- `/atendimento/<id>/evolucao/nova/` - Registrar nova evolução
+- `/atendimento/<id>/sinais-vitais/` - Timeline de sinais vitais
+- `/atendimento/<id>/sinais-vitais/novo/` - Registrar novos sinais vitais
+
+**Admin:**
+- `/admin/` - Interface administrativa Django
 
 ---
 
@@ -319,24 +454,36 @@ docker-compose exec db psql -U hospital_admin -d hospital_db
 
 ✅ Tudo num único lugar digital, com timeline completa do atendimento.
 
+**🔄 Refatoração Arquitetural (Novembro 2025):**
+- Projeto refatorado de app monolítico (`atendimento`) para **4 apps especializados** por domínio
+- Melhora **organização, escalabilidade e manutenibilidade** do código
+- Separação clara de responsabilidades: `pacientes`, `usuarios`, `atendimentos`, `prontuario`
+- ✅ **100% dos dados preservados** - apenas reorganização de código
+- Tabelas do banco renomeadas para refletir a nova estrutura modular
+
 ---
 
-### 🟡 FASE 4: SINAIS VITAIS (PRÓXIMA - CRÍTICA!)
+### ✅ FASE 4: SINAIS VITAIS (COMPLETA)
 
-- [ ] Model SinalVital vinculado a Atendimento e Profissional
-- [ ] Campos: pressao_arterial (sistólica/diastólica), frequencia_cardiaca, frequencia_respiratoria, temperatura, saturacao_o2, glicemia
-- [ ] Form rápido para enfermagem
-- [ ] Listagem por atendimento
-- [ ] Gráficos de evolução temporal (opcional)
+**Por que é crítica:** Digitaliza parâmetros vitais que hoje ficam fragmentados em quadros brancos e planilhas, permitindo acompanhamento temporal estruturado da evolução do paciente.
+
+- [x] Model SinalVital vinculado a Atendimento e Profissional
+- [x] Campos: pressao_arterial (sistólica/diastólica), frequencia_cardiaca, frequencia_respiratoria, temperatura, saturacao_o2, glicemia
+- [x] Form rápido para profissionais (especialmente enfermagem)
+- [x] Listagem cronológica por atendimento (timeline visual)
+- [x] Validações de ranges clínicos realistas (dupla camada)
+- [x] Alertas automáticos para valores fora dos parâmetros normais
+- [x] Integração com dashboard (botão + badge de contagem)
+- [x] Template responsivo com ícones coloridos (verde normal, amarelo alerta)
 
 **Problema da PBL que resolve:**
 > "Quadros brancos físicos e planilhas produzem instantâneos que se desatualizam"
 
-✅ Sinais vitais digitalizados, timestamped e persistentes.
+✅ Sinais vitais digitalizados, timestamped, persistentes e com alertas automáticos.
 
 ---
 
-### 🟢 FASE 5: PRESCRIÇÕES MÉDICAS
+### 🟡 FASE 5: PRESCRIÇÕES MÉDICAS (PRÓXIMA - PRIORIDADE ALTA)
 
 - [ ] Model Prescricao (atendimento, profissional, data, validade)
 - [ ] Model ItemPrescricao (medicamento, dose, via, frequência, duração)
@@ -398,15 +545,22 @@ docker-compose exec db psql -U hospital_admin -d hospital_db
 - Infraestrutura Docker + PostgreSQL
 
 **FASE 3 - Evolução Clínica:** ✅ COMPLETA
-- Registro de evoluções clínicas por profissionais.
-- Timeline cronológica completa por atendimento.
-- Distinção visual para tipos de evolução (Médica, Enfermagem, etc.).
+- Registro de evoluções clínicas por profissionais
+- Timeline cronológica completa por atendimento
+- Distinção visual para tipos de evolução (Médica, Enfermagem, etc.)
+
+**FASE 4 - Sinais Vitais:** ✅ COMPLETA
+- Registro de sinais vitais (PA, FC, FR, Temp, SpO₂, Glicemia)
+- Validações clínicas rigorosas com ranges realistas
+- Alertas automáticos para valores alterados
+- Timeline visual com ícones coloridos
+- Integração completa com dashboard
 
 ### 🎯 Próximo Passo
 
-**FASE 4 - Sinais Vitais** (CRÍTICA - Prioridade Máxima)
+**FASE 5 - Prescrições Médicas** (Prioridade Alta)
 
-O próximo passo é permitir o registro de sinais vitais (pressão, temperatura, etc.), digitalizando outra parte crucial do atendimento e permitindo o acompanhamento da evolução do paciente de forma estruturada.
+O próximo passo é implementar o sistema de prescrições médicas, permitindo que médicos prescrevam medicamentos com verificação automática de alergias, segregação por perfil e registro auditável.
 
 ---
 
