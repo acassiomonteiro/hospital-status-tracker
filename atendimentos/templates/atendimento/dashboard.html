@@ -79,6 +79,14 @@
                             </span>
                             {% endif %}
                         </a>
+                        <a href="{% url 'solicitacoes_exame_atendimento' atendimento.id %}" class="text-orange-600 hover:text-orange-900 flex items-center">
+                            Ver Exames
+                            {% if atendimento.solicitacoes_exame.count > 0 %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                {{ atendimento.solicitacoes_exame.count }}
+                            </span>
+                            {% endif %}
+                        </a>
                         <a href="{% url 'atualizar_status' atendimento.id %}" class="text-blue-600 hover:text-blue-900">Atualizar Status</a>
                     </div>
                 </td>
