@@ -315,3 +315,135 @@ class ItemPrescricao(models.Model):
 
     def __str__(self):
         return f"{self.medicamento} - {self.dose} - {self.get_via_display()}"
+
+
+class SolicitacaoExame(models.Model):
+    """Model para registro de solicitações de exames durante o atendimento"""
+
+    TIPO_CHOICES = [
+        ('LABORATORIO', 'Laboratório'),
+        ('IMAGEM', 'Imagem'),
+        ('CARDIOLOGIA', 'Cardiologia'),
+        ('ANATOMIA_PATOLOGICA', 'Anatomia Patológica'),
+        ('OUTRO', 'Outro'),
+    ]
+
+    STATUS_CHOICES = [
+        ('SOLICITADO', 'Solicitado'),
+        ('COLETADO', 'Coletado'),
+        ('RESULTADO_DISPONIVEL', 'Resultado Disponível'),
+        ('CANCELADO', 'Cancelado'),
+    ]
+
+    atendimento = models.ForeignKey(
+        Atendimento,
+        on_delete=models.PROTECT,
+        related_name='solicitacoes_exame',
+        verbose_name='Atendimento'
+    )
+    profissional = models.ForeignKey(
+        Profissional,
+        on_delete=models.PROTECT,
+        related_name='exames_solicitados',
+        verbose_name='Médico Solicitante'
+    )
+    tipo = models.CharField(
+        max_length=30,
+        choices=TIPO_CHOICES,
+        verbose_name='Tipo de Exame'
+    )
+    nome_exame = models.CharField(
+        max_length=200,
+        verbose_name='Nome do Exame',
+        help_text='Ex: Hemograma completo, Raio-X de tórax, Eletrocardiograma'
+    )
+    justificativa = models.TextField(
+        verbose_name='Justificativa Clínica',
+        help_text='Motivo da solicitação do exame'
+    )
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='SOLICITADO',
+        verbose_name='Status'
+    )
+    data_solicitacao = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Data da Solicitação'
+    )
+    data_atualizacao = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Última Atualização'
+    )
+
+    class Meta:
+        verbose_name = 'Solicitação de Exame'
+        verbose_name_plural = 'Solicitações de Exames'
+        ordering = ['-data_solicitacao']
+
+    def __str__(self):
+        return f"{self.nome_exame} - {self.atendimento.paciente.nome} - {self.data_solicitacao.strftime('%d/%m/%Y')}"
+
+    def get_status_badge_class(self):
+        """Retorna classe CSS para estilizar o status da solicitação"""
+        status_classes = {
+            'SOLICITADO': 'bg-blue-100 text-blue-800 border-blue-300',
+            'COLETADO': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+            'RESULTADO_DISPONIVEL': 'bg-green-100 text-green-800 border-green-300',
+            'CANCELADO': 'bg-red-100 text-red-800 border-red-300',
+        }
+        return status_classes.get(self.status, 'bg-gray-100 text-gray-800 border-gray-300')
+
+    def get_tipo_badge_class(self):
+        """Retorna classe CSS para estilizar o tipo de exame"""
+        tipo_classes = {
+            'LABORATORIO': 'bg-purple-100 text-purple-800 border-purple-300',
+            'IMAGEM': 'bg-indigo-100 text-indigo-800 border-indigo-300',
+            'CARDIOLOGIA': 'bg-pink-100 text-pink-800 border-pink-300',
+            'ANATOMIA_PATOLOGICA': 'bg-orange-100 text-orange-800 border-orange-300',
+            'OUTRO': 'bg-gray-100 text-gray-800 border-gray-300',
+        }
+        return tipo_classes.get(self.tipo, 'bg-gray-100 text-gray-800 border-gray-300')
+
+    def tem_resultado(self):
+        """Verifica se a solicitação possui resultado registrado"""
+        return hasattr(self, 'resultado') and self.resultado is not None
+
+
+class ResultadoExame(models.Model):
+    """Model para registro de resultados de exames"""
+
+    solicitacao = models.OneToOneField(
+        SolicitacaoExame,
+        on_delete=models.PROTECT,
+        related_name='resultado',
+        verbose_name='Solicitação de Exame'
+    )
+    resultado_texto = models.TextField(
+        verbose_name='Resultado',
+        help_text='Descrição textual do resultado do exame'
+    )
+    arquivo_laudo = models.FileField(
+        upload_to='laudos/%Y/%m/',
+        null=True,
+        blank=True,
+        verbose_name='Arquivo do Laudo',
+        help_text='Upload do laudo em PDF ou imagem (opcional)'
+    )
+    data_resultado = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Data do Resultado'
+    )
+    observacoes = models.TextField(
+        blank=True,
+        verbose_name='Observações',
+        help_text='Observações adicionais sobre o resultado (opcional)'
+    )
+
+    class Meta:
+        verbose_name = 'Resultado de Exame'
+        verbose_name_plural = 'Resultados de Exames'
+        ordering = ['-data_resultado']
+
+    def __str__(self):
+        return f"Resultado - {self.solicitacao.nome_exame} - {self.data_resultado.strftime('%d/%m/%Y')}"
