@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from atendimentos.models import Atendimento
 from usuarios.models import Profissional
 
@@ -238,6 +239,19 @@ class Prescricao(models.Model):
         verbose_name_plural = 'Prescrições Médicas'
         ordering = ['-data_prescricao']
 
+    def clean(self):
+        """Valida que apenas médicos podem criar prescrições"""
+        super().clean()
+        if self.profissional and self.profissional.perfil != 'MEDICO':
+            raise ValidationError({
+                'profissional': 'Apenas médicos podem criar prescrições médicas.'
+            })
+
+    def save(self, *args, **kwargs):
+        """Executa validação antes de salvar"""
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Prescrição - {self.atendimento.paciente.nome} - {self.data_prescricao.strftime('%d/%m/%Y %H:%M')}"
 
@@ -380,6 +394,19 @@ class SolicitacaoExame(models.Model):
         verbose_name = 'Solicitação de Exame'
         verbose_name_plural = 'Solicitações de Exames'
         ordering = ['-data_solicitacao']
+
+    def clean(self):
+        """Valida que apenas médicos podem solicitar exames"""
+        super().clean()
+        if self.profissional and self.profissional.perfil != 'MEDICO':
+            raise ValidationError({
+                'profissional': 'Apenas médicos podem solicitar exames.'
+            })
+
+    def save(self, *args, **kwargs):
+        """Executa validação antes de salvar"""
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nome_exame} - {self.atendimento.paciente.nome} - {self.data_solicitacao.strftime('%d/%m/%Y')}"
