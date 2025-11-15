@@ -1,0 +1,62 @@
+<div class="bg-white shadow-md rounded-lg border-l-4 border-orange-400 p-4">
+    <div class="flex items-start justify-between mb-2">
+        <div>
+            <h4 class="text-md font-semibold text-gray-900">{{ exame.nome_exame }}</h4>
+            <div class="flex items-center space-x-2 mt-1">
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {{ exame.get_tipo_badge_class }} border">
+                    {{ exame.get_tipo_display }}
+                </span>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {{ exame.get_status_badge_class }} border">
+                    {{ exame.get_status_display }}
+                </span>
+            </div>
+        </div>
+        <div class="text-sm text-gray-500">
+            {{ data|date:"d/m/Y H:i" }}
+        </div>
+    </div>
+
+    <div class="mt-3 bg-orange-50 rounded p-3">
+        <p class="text-xs text-orange-600 font-medium">Justificativa:</p>
+        <p class="text-sm text-orange-900 mt-1">{{ exame.justificativa }}</p>
+    </div>
+
+    {% if exame.tem_resultado %}
+    <div class="mt-3 bg-green-50 border-l-4 border-green-400 p-3">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-green-700 font-medium">Resultado Disponível</p>
+            <span class="text-xs text-green-600">{{ exame.resultado.data_resultado|date:"d/m/Y H:i" }}</span>
+        </div>
+        <p class="text-sm text-green-900 whitespace-pre-line">{{ exame.resultado.resultado_texto }}</p>
+
+        {% if exame.resultado.arquivo_laudo %}
+        <a href="{{ exame.resultado.arquivo_laudo.url }}" target="_blank"
+           class="mt-2 inline-flex items-center text-xs text-green-700 hover:text-green-900">
+            <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+            Ver Laudo Anexo
+        </a>
+        {% endif %}
+
+        {% if exame.resultado.observacoes %}
+        <p class="text-xs text-green-700 mt-2 italic">
+            <strong>Obs:</strong> {{ exame.resultado.observacoes }}
+        </p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="mt-3 bg-gray-50 rounded p-2 text-center">
+        <p class="text-xs text-gray-600">Aguardando resultado</p>
+    </div>
+    {% endif %}
+
+    <div class="flex items-center text-xs text-gray-500 border-t pt-2 mt-3">
+        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+        <span class="font-medium">{{ exame.profissional.user.get_full_name|default:exame.profissional.user.username }}</span>
+        <span class="mx-1">-</span>
+        <span>{{ exame.profissional.get_perfil_display }}</span>
+    </div>
+</div>

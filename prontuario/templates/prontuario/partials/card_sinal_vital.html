@@ -1,0 +1,84 @@
+<div class="bg-white shadow-md rounded-lg border-l-4 border-purple-400 p-4">
+    <div class="flex items-start justify-between mb-2">
+        <div>
+            <h4 class="text-md font-semibold text-gray-900">Sinais Vitais</h4>
+        </div>
+        <div class="text-sm text-gray-500">
+            {{ data|date:"d/m/Y H:i" }}
+        </div>
+    </div>
+
+    <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {% if sinal.pressao_arterial_sistolica and sinal.pressao_arterial_diastolica %}
+        <div class="bg-purple-50 rounded p-2">
+            <div class="text-xs text-purple-600 font-medium">Pressão Arterial</div>
+            <div class="text-sm font-semibold text-purple-900">{{ sinal.get_pressao_arterial }} mmHg</div>
+        </div>
+        {% endif %}
+
+        {% if sinal.frequencia_cardiaca %}
+        <div class="bg-purple-50 rounded p-2">
+            <div class="text-xs text-purple-600 font-medium">Frequência Cardíaca</div>
+            <div class="text-sm font-semibold text-purple-900">{{ sinal.frequencia_cardiaca }} bpm</div>
+        </div>
+        {% endif %}
+
+        {% if sinal.temperatura %}
+        <div class="bg-purple-50 rounded p-2">
+            <div class="text-xs text-purple-600 font-medium">Temperatura</div>
+            <div class="text-sm font-semibold text-purple-900">{{ sinal.temperatura }} °C</div>
+        </div>
+        {% endif %}
+
+        {% if sinal.saturacao_o2 %}
+        <div class="bg-purple-50 rounded p-2">
+            <div class="text-xs text-purple-600 font-medium">Saturação O₂</div>
+            <div class="text-sm font-semibold text-purple-900">{{ sinal.saturacao_o2 }}%</div>
+        </div>
+        {% endif %}
+
+        {% if sinal.frequencia_respiratoria %}
+        <div class="bg-purple-50 rounded p-2">
+            <div class="text-xs text-purple-600 font-medium">Freq. Respiratória</div>
+            <div class="text-sm font-semibold text-purple-900">{{ sinal.frequencia_respiratoria }} irpm</div>
+        </div>
+        {% endif %}
+
+        {% if sinal.glicemia %}
+        <div class="bg-purple-50 rounded p-2">
+            <div class="text-xs text-purple-600 font-medium">Glicemia</div>
+            <div class="text-sm font-semibold text-purple-900">{{ sinal.glicemia }} mg/dL</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if sinal.tem_sinais_alterados %}
+    <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-2">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-4 w-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-2">
+                <p class="text-xs text-yellow-800 font-medium">Alertas: {{ sinal.tem_sinais_alterados|join:", " }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if sinal.observacoes %}
+    <div class="mt-3 bg-gray-50 rounded p-2">
+        <p class="text-xs text-gray-700">{{ sinal.observacoes }}</p>
+    </div>
+    {% endif %}
+
+    <div class="flex items-center text-xs text-gray-500 border-t pt-2 mt-3">
+        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+        <span class="font-medium">{{ sinal.profissional.user.get_full_name|default:sinal.profissional.user.username }}</span>
+        <span class="mx-1">-</span>
+        <span>{{ sinal.profissional.get_perfil_display }}</span>
+    </div>
+</div>
