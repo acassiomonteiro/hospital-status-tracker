@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Evolucao, SinalVital
+from .models import Evolucao, SinalVital, Prescricao, ItemPrescricao
 
 
 @admin.register(Evolucao)
@@ -66,3 +66,38 @@ class SinalVitalAdmin(admin.ModelAdmin):
         """Exibe pressão arterial formatada no list_display"""
         return obj.get_pressao_arterial()
     get_pressao_arterial.short_description = 'Pressão Arterial'
+
+
+class ItemPrescricaoInline(admin.TabularInline):
+    """Inline para exibir/editar itens da prescrição"""
+    model = ItemPrescricao
+    extra = 1
+    fields = ['medicamento', 'dose', 'via', 'frequencia', 'duracao_dias', 'observacoes_item']
+
+
+@admin.register(Prescricao)
+class PrescricaoAdmin(admin.ModelAdmin):
+    list_display = ['atendimento', 'profissional', 'data_prescricao', 'validade', 'status', 'total_itens']
+    list_filter = ['status', 'data_prescricao', 'profissional']
+    search_fields = ['atendimento__paciente__nome', 'observacoes', 'profissional__user__username']
+    readonly_fields = ['data_prescricao']
+    raw_id_fields = ['atendimento', 'profissional']
+    inlines = [ItemPrescricaoInline]
+
+    fieldsets = (
+        ('Atendimento', {
+            'fields': ('atendimento', 'profissional')
+        }),
+        ('Prescrição', {
+            'fields': ('validade', 'status', 'observacoes')
+        }),
+        ('Informações de Sistema', {
+            'fields': ('data_prescricao',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def total_itens(self, obj):
+        """Exibe total de medicamentos prescritos"""
+        return obj.total_itens()
+    total_itens.short_description = 'Total de Medicamentos'
