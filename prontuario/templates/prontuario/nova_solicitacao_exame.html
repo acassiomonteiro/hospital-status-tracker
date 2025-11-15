@@ -1,0 +1,125 @@
+{% extends 'atendimento/base.html' %}
+
+{% block title %}Solicitar Exame - {{ atendimento.paciente.nome }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Solicitar Exame</h2>
+            <p class="text-gray-600 mt-2">
+                Paciente: <span class="font-semibold">{{ atendimento.paciente.nome }}</span> (CPF: {{ atendimento.paciente.cpf }})
+            </p>
+            <p class="text-gray-600 text-sm">
+                Atendimento iniciado em {{ atendimento.data_hora_entrada|date:"d/m/Y às H:i" }}
+            </p>
+        </div>
+        <a href="{% url 'solicitacoes_exame_atendimento' atendimento.id %}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Ver Solicitações
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-md p-6">
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Erros não específicos de campo -->
+        {% if form.non_field_errors %}
+            <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        {% for error in form.non_field_errors %}
+                            <p class="text-sm text-red-700">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- Tipo de Exame -->
+            <div>
+                <label for="{{ form.tipo.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.tipo.label }} <span class="text-red-500">*</span>
+                </label>
+                {{ form.tipo }}
+                {% if form.tipo.help_text %}
+                    <p class="mt-1 text-xs text-gray-500">{{ form.tipo.help_text }}</p>
+                {% endif %}
+                {% if form.tipo.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.tipo.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Nome do Exame -->
+            <div>
+                <label for="{{ form.nome_exame.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.nome_exame.label }} <span class="text-red-500">*</span>
+                </label>
+                {{ form.nome_exame }}
+                {% if form.nome_exame.help_text %}
+                    <p class="mt-1 text-xs text-gray-500">{{ form.nome_exame.help_text }}</p>
+                {% endif %}
+                {% if form.nome_exame.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.nome_exame.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Justificativa -->
+            <div class="sm:col-span-2">
+                <label for="{{ form.justificativa.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.justificativa.label }} <span class="text-red-500">*</span>
+                </label>
+                {{ form.justificativa }}
+                {% if form.justificativa.help_text %}
+                    <p class="mt-1 text-xs text-gray-500">{{ form.justificativa.help_text }}</p>
+                {% endif %}
+                {% if form.justificativa.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.justificativa.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between">
+            <p class="text-xs text-gray-500">
+                Médico: {{ request.user.get_full_name|default:request.user.username }} - {{ request.user.profissional.get_perfil_display }}
+                {% if request.user.profissional.registro_profissional %}
+                    ({{ request.user.profissional.registro_profissional }})
+                {% endif %}
+            </p>
+            <div class="flex space-x-3">
+                <a href="{% url 'solicitacoes_exame_atendimento' atendimento.id %}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    Cancelar
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Solicitar Exame
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-blue-700">
+                <strong>Importante:</strong> A solicitação será registrada com status "Solicitado". O resultado poderá ser adicionado posteriormente por qualquer profissional.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
