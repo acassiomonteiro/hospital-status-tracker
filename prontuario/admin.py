@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Evolucao, SinalVital, Prescricao, ItemPrescricao
+from .models import Evolucao, SinalVital, Prescricao, ItemPrescricao, SolicitacaoExame, ResultadoExame
 
 
 @admin.register(Evolucao)
@@ -101,3 +101,64 @@ class PrescricaoAdmin(admin.ModelAdmin):
         """Exibe total de medicamentos prescritos"""
         return obj.total_itens()
     total_itens.short_description = 'Total de Medicamentos'
+
+
+@admin.register(SolicitacaoExame)
+class SolicitacaoExameAdmin(admin.ModelAdmin):
+    list_display = ['nome_exame', 'tipo', 'atendimento', 'profissional', 'status', 'data_solicitacao', 'tem_resultado_admin']
+    list_filter = ['tipo', 'status', 'data_solicitacao', 'profissional']
+    search_fields = ['nome_exame', 'atendimento__paciente__nome', 'justificativa', 'profissional__user__username']
+    readonly_fields = ['data_solicitacao', 'data_atualizacao']
+    raw_id_fields = ['atendimento', 'profissional']
+
+    fieldsets = (
+        ('Atendimento', {
+            'fields': ('atendimento', 'profissional')
+        }),
+        ('Exame', {
+            'fields': ('tipo', 'nome_exame', 'justificativa')
+        }),
+        ('Status', {
+            'fields': ('status',)
+        }),
+        ('Informações de Sistema', {
+            'fields': ('data_solicitacao', 'data_atualizacao'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def tem_resultado_admin(self, obj):
+        """Exibe se a solicitação possui resultado"""
+        if obj.tem_resultado():
+            return '✅ Sim'
+        return '❌ Não'
+    tem_resultado_admin.short_description = 'Possui Resultado'
+
+
+@admin.register(ResultadoExame)
+class ResultadoExameAdmin(admin.ModelAdmin):
+    list_display = ['solicitacao', 'data_resultado', 'tem_arquivo']
+    list_filter = ['data_resultado']
+    search_fields = ['solicitacao__nome_exame', 'resultado_texto', 'observacoes']
+    readonly_fields = ['data_resultado']
+    raw_id_fields = ['solicitacao']
+
+    fieldsets = (
+        ('Solicitação', {
+            'fields': ('solicitacao',)
+        }),
+        ('Resultado', {
+            'fields': ('resultado_texto', 'arquivo_laudo', 'observacoes')
+        }),
+        ('Informações de Sistema', {
+            'fields': ('data_resultado',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def tem_arquivo(self, obj):
+        """Exibe se o resultado possui arquivo anexo"""
+        if obj.arquivo_laudo:
+            return '✅ Sim'
+        return '❌ Não'
+    tem_arquivo.short_description = 'Possui Laudo Anexo'
