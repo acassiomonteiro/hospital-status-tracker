@@ -19,4 +19,7 @@ urlpatterns = [
     path('atendimento/<int:atendimento_id>/exame/solicitar/', views.NovaSolicitacaoExameView.as_view(), name='nova_solicitacao_exame'),
     path('exame/<int:solicitacao_id>/resultado/', views.AdicionarResultadoExameView.as_view(), name='adicionar_resultado_exame'),
     path('exame/<int:solicitacao_id>/cancelar/', views.CancelarExameView.as_view(), name='cancelar_exame'),
+
+    # Prontuário Completo (Timeline Unificada)
+    path('atendimento/<int:atendimento_id>/prontuario/', views.ProntuarioCompletoView.as_view(), name='prontuario_completo'),
 ]
