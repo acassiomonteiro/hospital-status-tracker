@@ -27,8 +27,10 @@ urlpatterns = [
     path('', include('ia.urls'))
 ]
 
-# Configuração para servir arquivos estáticos em desenvolvimento
+# Configuração para servir arquivos estáticos e media em desenvolvimento
 # staticfiles_urlpatterns usa o sistema de finders do Django para localizar arquivos estáticos
 if settings.DEBUG:
     from django.contrib.staticfiles.urls import staticfiles_urlpatterns
     urlpatterns += staticfiles_urlpatterns()
+    # Servir arquivos de media (uploads)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

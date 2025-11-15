@@ -119,6 +119,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Em desenvolvimento, o Django serve arquivos estáticos automaticamente quando DEBUG=True
 # e django.contrib.staticfiles está instalado. Em produção, coletar com collectstatic.
 
+# Media files (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
