@@ -147,3 +147,44 @@ class PacienteForm(forms.ModelForm):
         if uf:
             uf = uf.upper()
         return uf
+
+
+class PacienteBuscaForm(forms.Form):
+    """Formulário para busca avançada de pacientes"""
+
+    cpf = forms.CharField(
+        max_length=11,
+        required=False,
+        label='CPF',
+        widget=forms.TextInput(attrs={
+            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+            'placeholder': 'Digite o CPF (parcial ou completo)',
+            'maxlength': '11'
+        })
+    )
+
+    nome = forms.CharField(
+        max_length=200,
+        required=False,
+        label='Nome',
+        widget=forms.TextInput(attrs={
+            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+            'placeholder': 'Digite o nome ou parte dele'
+        })
+    )
+
+    data_nascimento = forms.DateField(
+        required=False,
+        label='Data de Nascimento',
+        widget=forms.DateInput(attrs={
+            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+            'type': 'date'
+        })
+    )
+
+    def clean_cpf(self):
+        """Remove caracteres não numéricos do CPF"""
+        cpf = self.cleaned_data.get('cpf')
+        if cpf:
+            cpf = ''.join(filter(str.isdigit, cpf))
+        return cpf
