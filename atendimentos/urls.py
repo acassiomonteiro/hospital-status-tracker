@@ -5,4 +5,5 @@ urlpatterns = [
     path('', views.DashboardView.as_view(), name='dashboard'),
     path('novo/', views.NovoAtendimentoView.as_view(), name='novo_atendimento'),
     path('atualizar/<int:atendimento_id>/', views.AtualizarStatusView.as_view(), name='atualizar_status'),
+    path('buscar/', views.BuscarAtendimentoView.as_view(), name='buscar_atendimento'),
 ]
