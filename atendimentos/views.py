@@ -124,3 +124,63 @@ class AtualizarStatusView(LoginRequiredMixin, DetailView):
             )
 
         return redirect('dashboard')
+
+
+class BuscarAtendimentoView(LoginRequiredMixin, ListView):
+    """View para busca e filtragem de atendimentos"""
+    model = Atendimento
+    template_name = 'atendimento/buscar_atendimento.html'
+    context_object_name = 'atendimentos'
+    paginate_by = 20
+
+    def get_queryset(self):
+        """Aplica filtros de busca no queryset com queries otimizadas"""
+        from .forms import AtendimentoBuscaForm
+
+        queryset = Atendimento.objects.select_related(
+            'paciente',
+            'profissional_responsavel__user'
+        ).all()
+
+        form = AtendimentoBuscaForm(self.request.GET)
+
+        if form.is_valid():
+            status = form.cleaned_data.get('status')
+            profissional = form.cleaned_data.get('profissional_responsavel')
+            data_inicio = form.cleaned_data.get('data_inicio')
+            data_fim = form.cleaned_data.get('data_fim')
+            paciente_nome = form.cleaned_data.get('paciente_nome')
+
+            # Filtro por status
+            if status:
+                queryset = queryset.filter(status=status)
+
+            # Filtro por profissional responsável
+            if profissional:
+                queryset = queryset.filter(profissional_responsavel=profissional)
+
+            # Filtro por intervalo de datas
+            if data_inicio:
+                queryset = queryset.filter(data_hora_entrada__date__gte=data_inicio)
+
+            if data_fim:
+                queryset = queryset.filter(data_hora_entrada__date__lte=data_fim)
+
+            # Filtro por nome do paciente (case-insensitive)
+            if paciente_nome:
+                queryset = queryset.filter(paciente__nome__icontains=paciente_nome)
+
+        # Ordena por data de entrada (mais recentes primeiro)
+        queryset = queryset.order_by('-data_hora_entrada')
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        """Adiciona form e total de resultados ao contexto"""
+        from .forms import AtendimentoBuscaForm
+
+        context = super().get_context_data(**kwargs)
+        context['form'] = AtendimentoBuscaForm(self.request.GET)
+        context['total_resultados'] = self.get_queryset().count()
+        context['tem_filtros'] = bool(self.request.GET)
+        return context
