@@ -1,0 +1,162 @@
+{% extends "atendimento/base.html" %}
+
+{% block title %}Buscar Pacientes - Hospital SHN{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Buscar Pacientes</h1>
+        <p class="text-gray-600 mt-2">Encontre pacientes por CPF, nome ou data de nascimento</p>
+    </div>
+
+    <!-- Formulário de Busca -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <form method="get" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Campo CPF -->
+                <div>
+                    <label for="{{ form.cpf.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.cpf.label }}
+                    </label>
+                    {{ form.cpf }}
+                    {% if form.cpf.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.cpf.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Campo Nome -->
+                <div>
+                    <label for="{{ form.nome.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.nome.label }}
+                    </label>
+                    {{ form.nome }}
+                    {% if form.nome.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.nome.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Campo Data de Nascimento -->
+                <div>
+                    <label for="{{ form.data_nascimento.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.data_nascimento.label }}
+                    </label>
+                    {{ form.data_nascimento }}
+                    {% if form.data_nascimento.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.data_nascimento.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="flex space-x-3">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+                    🔍 Buscar
+                </button>
+                {% if tem_filtros %}
+                <a href="{% url 'buscar_paciente' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg transition">
+                    Limpar Filtros
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Resultados -->
+    {% if tem_filtros %}
+    <div class="mb-4">
+        <p class="text-gray-600">
+            <strong>{{ total_resultados }}</strong> paciente(s) encontrado(s)
+        </p>
+    </div>
+
+    {% if pacientes %}
+    <div class="grid gap-4">
+        {% for paciente in pacientes %}
+        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="text-xl font-semibold text-gray-900">{{ paciente.nome }}</h3>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600">
+                        <div>
+                            <span class="font-medium">CPF:</span> {{ paciente.cpf }}
+                        </div>
+                        <div>
+                            <span class="font-medium">Data de Nascimento:</span> {{ paciente.data_nascimento|date:"d/m/Y" }}
+                        </div>
+                        {% if paciente.telefone %}
+                        <div>
+                            <span class="font-medium">Telefone:</span> {{ paciente.telefone }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if paciente.email %}
+                    <div class="mt-2 text-sm text-gray-600">
+                        <span class="font-medium">Email:</span> {{ paciente.email }}
+                    </div>
+                    {% endif %}
+                    {% if paciente.alergias %}
+                    <div class="mt-2">
+                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">⚠️ Possui alergias</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="ml-4">
+                    <a href="{% url 'dashboard' %}?paciente_id={{ paciente.id }}"
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition text-sm">
+                        Ver Atendimentos
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginação -->
+    {% if is_paginated %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex space-x-2">
+            {% if page_obj.has_previous %}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1"
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                Primeira
+            </a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                Anterior
+            </a>
+            {% endif %}
+
+            <span class="px-3 py-2 bg-blue-600 text-white rounded-md">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                Próxima
+            </a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}"
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                Última
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <p class="text-yellow-800 text-lg">Nenhum paciente encontrado com os critérios informados.</p>
+        <p class="text-yellow-600 text-sm mt-2">Tente ajustar os filtros de busca.</p>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+        <p class="text-blue-800 text-lg">Digite os critérios de busca acima para encontrar pacientes.</p>
+        <p class="text-blue-600 text-sm mt-2">Você pode buscar por CPF, nome ou data de nascimento.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
